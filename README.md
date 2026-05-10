@@ -10,17 +10,16 @@ CLI and MCP server for Atlassian Confluence. Read, create, update, and delete pa
 - **Markdown support** — Automatically converts `.md` files to Confluence storage format
 - **Secure by design** — Credentials are read from environment variables only, never written to disk
 
-## Setup
+## Installation
 
 ```bash
-# Clone and install
-git clone https://github.com/Shadowgandor/confluence-tools.git
-cd confluence-tools
-npm install
-npm run build
+npm install -g confluence-tools
+```
 
-# Make the CLI available globally
-npm link
+Or run without installing:
+
+```bash
+npx confluence-tools confluence auth
 ```
 
 ### Environment variables
@@ -69,8 +68,7 @@ Add to your Claude Code config (`~/.claude.json` or project `.mcp.json`):
 {
   "mcpServers": {
     "confluence": {
-      "command": "npx",
-      "args": ["-y", "confluence-tools", "--mcp"],
+      "command": "confluence-mcp",
       "env": {
         "CONFLUENCE_URL": "https://your-instance.atlassian.net/wiki",
         "CONFLUENCE_EMAIL": "you@example.com",
@@ -81,10 +79,22 @@ Add to your Claude Code config (`~/.claude.json` or project `.mcp.json`):
 }
 ```
 
-Or run directly:
+Or without a global install:
 
-```bash
-npm run dev:mcp
+```json
+{
+  "mcpServers": {
+    "confluence": {
+      "command": "npx",
+      "args": ["--package=confluence-tools", "-y", "confluence-mcp"],
+      "env": {
+        "CONFLUENCE_URL": "https://your-instance.atlassian.net/wiki",
+        "CONFLUENCE_EMAIL": "you@example.com",
+        "CONFLUENCE_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
 ```
 
 ### Available tools

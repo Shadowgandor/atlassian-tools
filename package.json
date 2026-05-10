@@ -6,8 +6,14 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "confluence": "./dist/cli/index.js"
+    "confluence": "./dist/cli/index.js",
+    "confluence-mcp": "./dist/mcp/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": "./dist/core/index.js",
     "./mcp": "./dist/mcp/index.js"
