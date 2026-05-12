@@ -1,5 +1,5 @@
 {
-  "name": "atlassian-tools",
+  "name": "@geeveeh/atlassian-tools",
   "version": "0.2.0",
   "description": "CLI and MCP server for Atlassian Cloud (Confluence, Jira) — manage pages and issues from your terminal or AI agent.",
   "author": "GeeveeH Software",
