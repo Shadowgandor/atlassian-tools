@@ -8,6 +8,7 @@ import {
   IssueUpdateInput,
   IssueSearchOptions,
 } from "./types.js";
+import { textToAdf, adfToText, buildJql } from "./helpers.js";
 
 interface JiraSearchResponse {
   issues: JiraIssue[];
@@ -21,28 +22,6 @@ interface JiraProjectSearchResponse {
 
 interface JiraTransitionsResponse {
   transitions: JiraTransition[];
-}
-
-function textToAdf(text: string): unknown {
-  return {
-    type: "doc",
-    version: 1,
-    content: text.split("\n\n").map((paragraph) => ({
-      type: "paragraph",
-      content: [{ type: "text", text: paragraph }],
-    })),
-  };
-}
-
-function adfToText(adf: unknown): string {
-  if (!adf || typeof adf !== "object") return "";
-  const doc = adf as { content?: Array<{ content?: Array<{ text?: string }> }> };
-  if (!doc.content) return "";
-  return doc.content
-    .map((block) =>
-      (block.content ?? []).map((inline) => inline.text ?? "").join(""),
-    )
-    .join("\n\n");
 }
 
 export class JiraClient {
@@ -79,13 +58,7 @@ export class JiraClient {
   }
 
   async searchIssues(options: IssueSearchOptions): Promise<JiraIssue[]> {
-    const clauses: string[] = [];
-    if (options.project) clauses.push(`project = "${options.project}"`);
-    if (options.status) clauses.push(`status = "${options.status}"`);
-    if (options.assignee) clauses.push(`assignee = "${options.assignee}"`);
-    if (options.type) clauses.push(`issuetype = "${options.type}"`);
-
-    const jql = options.jql ?? clauses.join(" AND ");
+    const jql = buildJql(options);
     const params = new URLSearchParams({
       jql,
       maxResults: String(options.limit ?? 25),
