@@ -6,8 +6,8 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "atlassian": "./dist/cli/index.js",
-    "atlassian-mcp": "./dist/mcp/index.js"
+    "atlassian": "dist/cli/index.js",
+    "atlassian-mcp": "dist/mcp/index.js"
   },
   "files": [
     "dist",
