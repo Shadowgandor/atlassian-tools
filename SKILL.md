@@ -1,12 +1,12 @@
 # Atlassian Skill
 
-Interact with Atlassian Cloud products using the `atlassian` CLI tool. Supports Confluence (pages) and Jira (issues) with secure token-based authentication.
+Interact with Atlassian Cloud products using the `atlassian` CLI tool. Supports Confluence (pages, comments, labels, attachments, child pages) and Jira (issues, comments, attachments, issue links, work logs) with secure token-based authentication.
 
 ---
 
 ## Skill Description (for triggering)
 
-Use this skill whenever the user wants to interact with Atlassian Confluence or Jira. This includes creating, reading, updating, or deleting Confluence pages, searching for or managing Jira issues, listing spaces or projects, or any task that involves Atlassian content. Triggers include mentions of 'Confluence', 'Jira', 'wiki page', 'Confluence page', 'Confluence space', 'Jira issue', 'Jira ticket', 'sprint', or requests to publish documentation or manage project work. Also use when the user references an Atlassian URL or asks to manage knowledge base content or project issues.
+Use this skill whenever the user wants to interact with Atlassian Confluence or Jira. This includes creating, reading, updating, or deleting Confluence pages, searching for or managing Jira issues, listing spaces or projects, adding comments, uploading attachments, managing labels, linking issues, or logging time. Triggers include mentions of 'Confluence', 'Jira', 'wiki page', 'Confluence page', 'Confluence space', 'Jira issue', 'Jira ticket', 'sprint', or requests to publish documentation or manage project work. Also use when the user references an Atlassian URL or asks to manage knowledge base content or project issues.
 
 ---
 
@@ -37,7 +37,7 @@ atlassian jira auth
 
 ## Confirmation Protocol
 
-**ALWAYS ask the user for explicit confirmation before any create, update, delete, or transition operation.**
+**ALWAYS ask the user for explicit confirmation before any create, update, delete, attach, comment, link, or transition operation.**
 
 Describe what will happen (space, title, changes, issue key) and wait for an affirmative reply before running the command. Use the `-y` flag only if the user has already confirmed.
 
@@ -75,6 +75,13 @@ atlassian confluence search -s <SPACE_KEY> -t "Page Title"
 atlassian confluence search -s <SPACE_KEY> --limit 10
 ```
 
+### List child pages
+
+```bash
+atlassian confluence children <pageId>
+atlassian confluence children <pageId> --limit 50
+```
+
 ### Create a page (requires confirmation)
 
 ```bash
@@ -98,6 +105,43 @@ atlassian confluence update <pageId> -f content.md -m "Fixed typos"
 ```bash
 atlassian confluence delete <pageId>
 ```
+
+### Comments
+
+```bash
+# List comments on a page
+atlassian confluence comments <pageId>
+atlassian confluence comments <pageId> --limit 50
+
+# Add a comment (requires confirmation)
+atlassian confluence comment <pageId> -t "Comment text here"
+```
+
+### Labels
+
+```bash
+# List labels on a page
+atlassian confluence labels <pageId>
+
+# Add one or more labels (requires confirmation)
+atlassian confluence add-label <pageId> <label> [<label> ...]
+
+# Remove a label (requires confirmation)
+atlassian confluence remove-label <pageId> <label>
+```
+
+### Attachments
+
+```bash
+# List attachments on a page
+atlassian confluence attachments <pageId>
+
+# Upload a file as an attachment (requires confirmation)
+atlassian confluence attach <pageId> <file>
+atlassian confluence attach <pageId> <file> -c "Optional comment"
+```
+
+Supported file types include PNG, JPEG, GIF, WebP, SVG, PDF, ZIP, CSV, JSON, XML, HTML, Markdown, and plain text. MIME type is detected automatically from the file extension.
 
 ---
 
@@ -137,6 +181,10 @@ atlassian jira view CARD-42 --json
 ```bash
 atlassian jira create --project CARD --type Bug --summary "Fix login"
 atlassian jira create --project CARD --type Task --summary "Set up CI" --description "Configure GitHub Actions" --priority High
+atlassian jira create --project CARD --type Story --summary "User auth" --labels "auth,backend"
+
+# Create a subtask under a parent issue
+atlassian jira create --project CARD --type Subtask --summary "Write unit tests" --parent CARD-42
 ```
 
 ### Update an issue (requires confirmation)
@@ -160,6 +208,57 @@ atlassian jira transition CARD-42 --to "Done"
 atlassian jira delete CARD-42
 ```
 
+### Comments
+
+```bash
+# List comments on an issue
+atlassian jira comments CARD-42
+
+# Add a comment (requires confirmation)
+atlassian jira comment CARD-42 -t "Blocked on CARD-10, investigating."
+```
+
+### Issue links
+
+```bash
+# Show available link types (e.g. Blocks, Clones, Relates to)
+atlassian jira link-types
+
+# List links on an issue
+atlassian jira links CARD-42
+
+# Link two issues (requires confirmation)
+# <issueKey> is the outward side; <target> is the inward side
+atlassian jira link CARD-42 --type "Blocks" --target CARD-99
+atlassian jira link CARD-42 --type "Relates to" --target CARD-7
+```
+
+Use `jira link-types` first if you are unsure which link type name to use — link type names are case-sensitive.
+
+### Work logs
+
+```bash
+# List work log entries on an issue
+atlassian jira worklogs CARD-42
+
+# Log time worked (requires confirmation)
+atlassian jira log CARD-42 --time "2h"
+atlassian jira log CARD-42 --time "1d 2h 30m" --comment "Implemented auth flow"
+atlassian jira log CARD-42 --time "30m" --started "2024-06-01T09:00:00.000+0000"
+```
+
+Time format: `Xd Xh Xm` — e.g. `2h`, `30m`, `1d`, `1d 2h 30m`.
+
+### Attachments
+
+```bash
+# List attachments on an issue
+atlassian jira attachments CARD-42
+
+# Upload a file as an attachment (requires confirmation)
+atlassian jira attach CARD-42 /path/to/screenshot.png
+```
+
 ---
 
 ## Error Handling
@@ -181,3 +280,5 @@ The CLI exits with a non-zero code and a clear error message on failure:
 - Page/issue URLs are printed after create/update operations.
 - Use `--jql` for full JQL query power, or the simpler `--project`/`--status`/`--type` filters.
 - `transition --list` shows available workflow transitions before committing to one.
+- `link-types` shows available link type names — use the exact name with `link --type`.
+- Attachment MIME type is detected automatically from the file extension.
