@@ -107,6 +107,7 @@ export class JiraClient {
     if (input.priority) fields.priority = { name: input.priority };
     if (input.labels) fields.labels = input.labels;
     if (input.assigneeId) fields.assignee = { accountId: input.assigneeId };
+    if (input.parentKey) fields.parent = { key: input.parentKey };
 
     const created = await this.http.request<{ id: string; key: string; self: string }>(
       "/rest/api/3/issue",

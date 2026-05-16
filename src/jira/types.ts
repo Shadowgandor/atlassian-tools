@@ -38,6 +38,7 @@ export interface IssueCreateInput {
   priority?: string;
   labels?: string[];
   assigneeId?: string;
+  parentKey?: string;
 }
 
 export interface IssueUpdateInput {

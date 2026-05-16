@@ -506,12 +506,13 @@ server.tool(
     description: z.string().optional().describe("Issue description (plain text)"),
     priority: z.string().optional().describe("Priority (Highest, High, Medium, Low, Lowest)"),
     labels: z.array(z.string()).optional().describe("Labels to apply"),
+    parentKey: z.string().optional().describe("Parent issue key for creating a subtask (e.g. 'PROJ-10')"),
   },
-  async ({ projectKey, issueType, summary, description, priority, labels }) => {
+  async ({ projectKey, issueType, summary, description, priority, labels, parentKey }) => {
     try {
       const client = getJiraClient();
       const issue = await client.createIssue({
-        projectKey, issueType, summary, description, priority, labels,
+        projectKey, issueType, summary, description, priority, labels, parentKey,
       });
 
       const baseUrl = process.env.ATLASSIAN_URL ?? process.env.CONFLUENCE_URL?.replace(/\/wiki\/?$/, "") ?? "";

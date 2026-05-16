@@ -127,6 +127,7 @@ export function registerJiraCommands(program: Command) {
     .option("--description <text>", "Issue description")
     .option("--priority <name>", "Priority (Highest, High, Medium, Low, Lowest)")
     .option("--labels <labels>", "Comma-separated labels")
+    .option("--parent <key>", "Parent issue key (creates a subtask)")
     .option("-y, --yes", "Skip confirmation prompt")
     .action(async (opts) => {
       try {
@@ -138,6 +139,7 @@ export function registerJiraCommands(program: Command) {
           console.log(`  Type:    ${opts.type}`);
           console.log(`  Summary: ${opts.summary}`);
           if (opts.priority) console.log(`  Priority: ${opts.priority}`);
+          if (opts.parent) console.log(`  Parent:  ${opts.parent}`);
           console.log();
 
           const ok = await confirm("Proceed?");
@@ -154,6 +156,7 @@ export function registerJiraCommands(program: Command) {
           description: opts.description,
           priority: opts.priority,
           labels: opts.labels?.split(",").map((l: string) => l.trim()),
+          parentKey: opts.parent,
         });
 
         console.log(chalk.green(`✓ Created: ${formatIssue(issue)}`));
