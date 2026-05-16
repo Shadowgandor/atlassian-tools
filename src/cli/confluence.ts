@@ -105,26 +105,69 @@ export function registerConfluenceCommands(program: Command) {
     });
 
   confluence
+    .command("templates")
+    .description("List available page templates")
+    .option("-s, --space <key>", "Space key (omit for global templates)")
+    .action(async (opts) => {
+      try {
+        const templates = await createClient().listTemplates(opts.space);
+        if (templates.length === 0) {
+          console.log(chalk.yellow("No templates found."));
+          return;
+        }
+        for (const t of templates) {
+          console.log(chalk.bold(t.name));
+          if (t.description) console.log(`  ${chalk.dim(t.description)}`);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
     .command("create")
     .description("Create a new page")
     .requiredOption("-s, --space <key>", "Space key")
     .requiredOption("-t, --title <title>", "Page title")
-    .requiredOption("-f, --file <path>", "Content file (.md, .html) or inline string")
+    .option("-f, --file <path>", "Content file (.md, .html) or inline string")
+    .option("--template <name>", "Template name to use as starting content (see: confluence templates)")
     .option("-p, --parent <id>", "Parent page ID")
     .option("--draft", "Create as draft")
     .option("-y, --yes", "Skip confirmation prompt")
     .action(async (opts) => {
       try {
+        if (!opts.file && !opts.template) {
+          console.error(chalk.red("Provide either --file or --template."));
+          process.exit(1);
+        }
+
         const client = createClient();
         const space = await client.getSpaceByKey(opts.space);
-        const body = await resolveBody(opts.file);
+
+        let body: string;
+        if (opts.template) {
+          const templates = await client.listTemplates(opts.space);
+          const tpl = templates.find(
+            (t) => t.name.toLowerCase() === opts.template.toLowerCase(),
+          );
+          if (!tpl) {
+            const names = templates.map((t) => t.name).join(", ");
+            console.error(chalk.red(`Template "${opts.template}" not found.`));
+            if (names) console.error(chalk.dim(`Available: ${names}`));
+            process.exit(1);
+          }
+          body = tpl.body?.storage?.value ?? "";
+        } else {
+          body = await resolveBody(opts.file);
+        }
 
         if (!opts.yes) {
           console.log(chalk.yellow("⚠ About to create page:"));
-          console.log(`  Space:  ${space.name} [${space.key}]`);
-          console.log(`  Title:  ${opts.title}`);
-          if (opts.parent) console.log(`  Parent: ${opts.parent}`);
-          console.log(`  Status: ${opts.draft ? "draft" : "published"}`);
+          console.log(`  Space:    ${space.name} [${space.key}]`);
+          console.log(`  Title:    ${opts.title}`);
+          if (opts.template) console.log(`  Template: ${opts.template}`);
+          if (opts.parent) console.log(`  Parent:   ${opts.parent}`);
+          console.log(`  Status:   ${opts.draft ? "draft" : "published"}`);
           console.log();
 
           const ok = await confirm("Proceed?");

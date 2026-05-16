@@ -102,15 +102,27 @@ atlassian confluence children <pageId>
 atlassian confluence children <pageId> --limit 50
 ```
 
+### List templates
+
+```bash
+atlassian confluence templates              # global templates
+atlassian confluence templates -s DEV       # space-specific templates
+```
+
 ### Create a page (requires confirmation)
 
 ```bash
+# From a file
 atlassian confluence create -s <SPACE_KEY> -t "Page Title" -f content.md
 atlassian confluence create -s <SPACE_KEY> -t "Page Title" -f content.html --parent <parentId>
 atlassian confluence create -s <SPACE_KEY> -t "Page Title" -f content.md --draft
+
+# From a template — use the exact template name from `confluence templates`
+atlassian confluence create -s <SPACE_KEY> -t "Q3 Retro" --template "Retrospective"
+atlassian confluence create -s <SPACE_KEY> -t "Weekly Sync" --template "Meeting Notes" --parent <parentId>
 ```
 
-The `-f` flag accepts `.md` files (auto-converted to Confluence format), `.html` files (passed as-is), or inline content.
+The `-f` flag accepts `.md` files (auto-converted to Confluence format), `.html` files (passed as-is), or inline content. Use `--template` instead of `-f` to start from a template.
 
 ### Update a page (requires confirmation)
 
@@ -346,6 +358,7 @@ The CLI exits with a non-zero code and a clear error message on failure:
 - `transition --list` shows available workflow transitions before committing to one.
 - `link-types` shows available link type names — use the exact name with `link --type`.
 - Attachment MIME type is detected automatically from the file extension.
+- Use `confluence templates` (or `confluence templates -s <KEY>`) to discover available templates before creating a page with `--template`.
 - Use `confluence cql` instead of `confluence search` when searching across spaces or by content body.
 - Use `jira users` to look up accountIds before assigning issues — Jira requires accountId, not a display name.
 - Use `jira boards` then `jira sprints <boardId>` to get sprint IDs before calling `move-to-sprint`.

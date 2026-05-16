@@ -4,7 +4,7 @@ CLI and MCP server for Atlassian Cloud. Manage Confluence pages and Jira issues 
 
 ## Features
 
-- **Confluence** — Pages: search (space-scoped or full CQL), read, create, copy, update, delete; plus comments, labels, attachments, and child pages
+- **Confluence** — Pages: search (space-scoped or full CQL), read, create (from content or template), copy, update, delete; plus comments, labels, attachments, and child pages
 - **Jira** — Issues: search (JQL), view, create (with subtask support), update, transition, delete; plus comments, attachments, issue links, work logs, epics, boards, sprints, and user search
 - **Shared auth** — One set of credentials (`ATLASSIAN_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_TOKEN`) for all products
 - **CLI** — `atlassian` command with product subcommands, interactive confirmations, coloured output
@@ -66,10 +66,17 @@ atlassian confluence cql 'type=page AND lastModified > "2024-01-01"' --limit 10
 # List child pages
 atlassian confluence children 12345678
 
+# List available templates
+atlassian confluence templates
+atlassian confluence templates -s DEV
+
 # Create a page (prompts for confirmation)
 atlassian confluence create -s DEV -t "New RFC" -f proposal.md
 atlassian confluence create -s DEV -t "New RFC" -f proposal.md --parent 87654321
 atlassian confluence create -s DEV -t "Draft" -f draft.md --draft
+# Create from a template
+atlassian confluence create -s DEV -t "Q3 Retro" --template "Retrospective"
+atlassian confluence create -s DEV -t "Meeting" --template "Meeting Notes" --parent 87654321
 
 # Update a page
 atlassian confluence update 12345678 -f updated.md -m "Revised section 3"
@@ -214,8 +221,9 @@ Or without a global install:
 | `confluence_read_page`            | Read page content by ID                     | No                  |
 | `confluence_search_pages`         | Search by space key and title               | No                  |
 | `confluence_search_cql`           | Full-text CQL search across all spaces      | No                  |
+| `confluence_list_templates`       | List page templates for a space or globally | No                  |
 | `confluence_list_child_pages`     | List child pages of a page                  | No                  |
-| `confluence_create_page`          | Create a new page                           | **Yes**             |
+| `confluence_create_page`          | Create a new page (supports `templateName`) | **Yes**             |
 | `confluence_copy_page`            | Copy a page to a new location               | **Yes**             |
 | `confluence_update_page`          | Update an existing page                     | **Yes**             |
 | `confluence_delete_page`          | Delete a page                               | **Yes**             |
@@ -298,6 +306,7 @@ const jira = new JiraClient(config);
 const pages = await confluence.searchPages({ spaceKey: "DEV", title: "RFC" });
 const results = await confluence.searchCQL('type=page AND text ~ "kubernetes"');
 const children = await confluence.listChildPages("12345678");
+const templates = await confluence.listTemplates("DEV");
 const copy = await confluence.copyPage({ pageId: "12345678", title: "Copy of RFC", destinationPageId: "87654321" });
 
 // Comments & labels

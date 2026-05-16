@@ -83,3 +83,11 @@ export interface PageCopyInput {
   copyAttachments?: boolean;
   copyLabels?: boolean;
 }
+
+export interface ConfluenceTemplate {
+  templateId: string;
+  name: string;
+  templateType: string;
+  description?: string;
+  body?: { storage?: { value: string } };
+}

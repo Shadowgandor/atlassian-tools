@@ -8,6 +8,7 @@ import {
   ConfluenceAttachment,
   ConfluenceLabel,
   ConfluenceComment,
+  ConfluenceTemplate,
   CQLSearchResult,
   AttachmentUploadInput,
   PageCopyInput,
@@ -70,6 +71,17 @@ export class ConfluenceClient {
       throw new AtlassianApiError(404, `Space with key "${spaceKey}" not found`);
     }
     return result.results[0];
+  }
+
+  // ── Templates ────────────────────────────────────────────────────
+
+  async listTemplates(spaceKey?: string): Promise<ConfluenceTemplate[]> {
+    const params = new URLSearchParams({ expand: "body" });
+    if (spaceKey) params.set("spaceKey", spaceKey);
+    const result = await this.http.request<{ results: ConfluenceTemplate[] }>(
+      `/rest/api/template/page?${params.toString()}`,
+    );
+    return result.results;
   }
 
   // ── Read ─────────────────────────────────────────────────────────

@@ -134,15 +134,36 @@ server.tool(
   {
     spaceKey: z.string().describe("The space key to create the page in"),
     title: z.string().describe("Page title"),
-    body: z.string().describe("Page content in Markdown or Confluence storage format (XHTML)"),
+    body: z.string().optional().describe("Page content in Markdown or Confluence storage format (XHTML) — omit when using templateName"),
+    templateName: z.string().optional().describe("Name of a template to use as the page body (use confluence_list_templates to see options)"),
     parentId: z.string().optional().describe("Parent page ID (omit for top-level)"),
     draft: z.boolean().optional().describe("Create as draft instead of published"),
   },
-  async ({ spaceKey, title, body, parentId, draft }) => {
+  async ({ spaceKey, title, body, templateName, parentId, draft }) => {
     try {
       const client = getConfluenceClient();
       const space = await client.getSpaceByKey(spaceKey);
-      const resolvedBody = await resolveBody(body);
+
+      let resolvedBody: string;
+      if (templateName) {
+        const templates = await client.listTemplates(spaceKey);
+        const tpl = templates.find((t) => t.name.toLowerCase() === templateName.toLowerCase());
+        if (!tpl) {
+          const names = templates.map((t) => t.name).join(", ");
+          return {
+            content: [{ type: "text", text: `Template "${templateName}" not found. Available: ${names || "none"}` }],
+            isError: true,
+          };
+        }
+        resolvedBody = tpl.body?.storage?.value ?? "";
+      } else if (body) {
+        resolvedBody = await resolveBody(body);
+      } else {
+        return {
+          content: [{ type: "text", text: "Provide either body content or a templateName." }],
+          isError: true,
+        };
+      }
 
       const page = await client.createPage({
         spaceId: space.id,
@@ -367,6 +388,29 @@ server.tool(
     try {
       await getConfluenceClient().removeLabel(pageId, label);
       return { content: [{ type: "text", text: `✓ Removed label "${label}"` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
+  "confluence_list_templates",
+  "List available Confluence page templates. Omit spaceKey to list global templates; provide it to include space-specific templates.",
+  {
+    spaceKey: z.string().optional().describe("Space key to list templates for (omit for global templates)"),
+  },
+  async ({ spaceKey }) => {
+    try {
+      const templates = await getConfluenceClient().listTemplates(spaceKey);
+      if (templates.length === 0) {
+        return { content: [{ type: "text", text: "No templates found." }] };
+      }
+      const text = templates.map((t) => {
+        const desc = t.description ? ` — ${t.description}` : "";
+        return `${t.name}${desc}`;
+      }).join("\n");
+      return { content: [{ type: "text", text }] };
     } catch (err) {
       return { content: [{ type: "text", text: formatError(err) }], isError: true };
     }
