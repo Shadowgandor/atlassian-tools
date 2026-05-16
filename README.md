@@ -4,8 +4,8 @@ CLI and MCP server for Atlassian Cloud. Manage Confluence pages and Jira issues 
 
 ## Features
 
-- **Confluence** — Pages: search, read, create, update, delete; plus comments, labels, attachments, and child pages
-- **Jira** — Issues: search (JQL), view, create (with subtask support), update, transition, delete; plus comments, attachments, issue links, and work logs
+- **Confluence** — Pages: search (space-scoped or full CQL), read, create, copy, update, delete; plus comments, labels, attachments, and child pages
+- **Jira** — Issues: search (JQL), view, create (with subtask support), update, transition, delete; plus comments, attachments, issue links, work logs, epics, boards, sprints, and user search
 - **Shared auth** — One set of credentials (`ATLASSIAN_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_TOKEN`) for all products
 - **CLI** — `atlassian` command with product subcommands, interactive confirmations, coloured output
 - **MCP server** — Expose all operations as tools for AI agents (Claude Code, etc.)
@@ -58,6 +58,11 @@ atlassian confluence read 12345678 --json
 atlassian confluence search -s DEV
 atlassian confluence search -s DEV -t "Architecture"
 
+# CQL search — full-text across all spaces, label filters, date ranges, etc.
+atlassian confluence cql 'type=page AND text ~ "kubernetes"'
+atlassian confluence cql 'type=page AND label = "approved" AND space.key = "DEV"'
+atlassian confluence cql 'type=page AND lastModified > "2024-01-01"' --limit 10
+
 # List child pages
 atlassian confluence children 12345678
 
@@ -69,6 +74,10 @@ atlassian confluence create -s DEV -t "Draft" -f draft.md --draft
 # Update a page
 atlassian confluence update 12345678 -f updated.md -m "Revised section 3"
 atlassian confluence update 12345678 -t "New Title"
+
+# Copy a page
+atlassian confluence copy 12345678 -t "Copy of RFC" -d 87654321
+atlassian confluence copy 12345678 -t "Copy of RFC" -d 87654321 --attachments --labels
 
 # Delete a page
 atlassian confluence delete 12345678
@@ -142,6 +151,19 @@ atlassian jira log CARD-42 --time "1d" --comment "Implemented auth flow"
 # Attachments
 atlassian jira attachments CARD-42
 atlassian jira attach CARD-42 /path/to/screenshot.png
+
+# User search (find accountIds for assignee)
+atlassian jira users "Jane Smith"
+atlassian jira users "jane@"
+
+# Epics
+atlassian jira epic CARD-5                        # list all issues in an epic
+
+# Boards & sprints
+atlassian jira boards
+atlassian jira sprints 42                         # list sprints on board 42
+atlassian jira sprints 42 --state active
+atlassian jira move-to-sprint 10 CARD-42 CARD-43  # move issues to sprint 10
 ```
 
 ## MCP server usage
@@ -191,8 +213,10 @@ Or without a global install:
 | `confluence_list_spaces`          | List spaces                                 | No                  |
 | `confluence_read_page`            | Read page content by ID                     | No                  |
 | `confluence_search_pages`         | Search by space key and title               | No                  |
+| `confluence_search_cql`           | Full-text CQL search across all spaces      | No                  |
 | `confluence_list_child_pages`     | List child pages of a page                  | No                  |
 | `confluence_create_page`          | Create a new page                           | **Yes**             |
+| `confluence_copy_page`            | Copy a page to a new location               | **Yes**             |
 | `confluence_update_page`          | Update an existing page                     | **Yes**             |
 | `confluence_delete_page`          | Delete a page                               | **Yes**             |
 | `confluence_list_comments`        | List comments on a page                     | No                  |
@@ -225,6 +249,11 @@ Or without a global install:
 | `jira_log_work`                   | Log time worked on an issue                 | **Yes**             |
 | `jira_list_attachments`           | List attachments on an issue                | No                  |
 | `jira_upload_attachment`          | Upload a file as an attachment to an issue  | **Yes**             |
+| `jira_search_users`               | Search users by name or email (for accountIds) | No               |
+| `jira_list_epic_issues`           | List all issues in an epic                  | No                  |
+| `jira_list_boards`                | List Scrum and Kanban boards                | No                  |
+| `jira_list_sprints`               | List sprints on a board                     | No                  |
+| `jira_move_to_sprint`             | Move issues to a sprint                     | **Yes**             |
 
 ## Project structure
 
@@ -267,7 +296,9 @@ const jira = new JiraClient(config);
 
 // Pages
 const pages = await confluence.searchPages({ spaceKey: "DEV", title: "RFC" });
+const results = await confluence.searchCQL('type=page AND text ~ "kubernetes"');
 const children = await confluence.listChildPages("12345678");
+const copy = await confluence.copyPage({ pageId: "12345678", title: "Copy of RFC", destinationPageId: "87654321" });
 
 // Comments & labels
 await confluence.addComment("12345678", "<p>Approved.</p>");
@@ -278,10 +309,19 @@ await confluence.uploadAttachment({ pageId: "12345678", filePath: "/tmp/diagram.
 
 // Jira issues
 const issues = await jira.searchIssues({ project: "CARD", status: "In Progress" });
+const epicIssues = await jira.listEpicIssues("CARD-5");
 await jira.addComment("CARD-42", "Blocked on infra, see CARD-10.");
 await jira.linkIssues("CARD-42", "Blocks", "CARD-99");
 await jira.addWorklog({ issueKey: "CARD-42", timeSpent: "2h", comment: "Auth implementation" });
 await jira.uploadAttachment({ issueKey: "CARD-42", filePath: "/tmp/screenshot.png" });
+
+// Boards & sprints
+const boards = await jira.listBoards();
+const sprints = await jira.listSprints(boards[0].id, "active");
+await jira.moveToSprint(sprints[0].id, ["CARD-42", "CARD-43"]);
+
+// User search
+const users = await jira.searchUsers("Jane Smith");
 ```
 
 ## Development

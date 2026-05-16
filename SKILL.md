@@ -1,12 +1,12 @@
 # Atlassian Skill
 
-Interact with Atlassian Cloud products using the `atlassian` CLI tool. Supports Confluence (pages, comments, labels, attachments, child pages) and Jira (issues, comments, attachments, issue links, work logs) with secure token-based authentication.
+Interact with Atlassian Cloud products using the `atlassian` CLI tool. Supports Confluence (pages, CQL search, copy, comments, labels, attachments, child pages) and Jira (issues, epics, boards, sprints, user search, comments, attachments, issue links, work logs) with secure token-based authentication.
 
 ---
 
 ## Skill Description (for triggering)
 
-Use this skill whenever the user wants to interact with Atlassian Confluence or Jira. This includes creating, reading, updating, or deleting Confluence pages, searching for or managing Jira issues, listing spaces or projects, adding comments, uploading attachments, managing labels, linking issues, or logging time. Triggers include mentions of 'Confluence', 'Jira', 'wiki page', 'Confluence page', 'Confluence space', 'Jira issue', 'Jira ticket', 'sprint', or requests to publish documentation or manage project work. Also use when the user references an Atlassian URL or asks to manage knowledge base content or project issues.
+Use this skill whenever the user wants to interact with Atlassian Confluence or Jira. This includes creating, reading, updating, copying, or deleting Confluence pages, searching content with CQL, managing Jira issues, sprints, boards, or epics, listing spaces or projects, adding comments, uploading attachments, managing labels, linking issues, logging time, or finding users. Triggers include mentions of 'Confluence', 'Jira', 'wiki page', 'Confluence page', 'Confluence space', 'Jira issue', 'Jira ticket', 'sprint', 'epic', 'board', or requests to publish documentation or manage project work. Also use when the user references an Atlassian URL or asks to manage knowledge base content or project issues.
 
 ---
 
@@ -75,6 +75,26 @@ atlassian confluence search -s <SPACE_KEY> -t "Page Title"
 atlassian confluence search -s <SPACE_KEY> --limit 10
 ```
 
+### CQL search (full-text, cross-space)
+
+Prefer CQL when the user wants to search by content, across multiple spaces, by label, or by date. The `search` command only works within a single space by title.
+
+```bash
+# Full-text search across all spaces
+atlassian confluence cql 'type=page AND text ~ "kubernetes"'
+
+# Filter by label
+atlassian confluence cql 'type=page AND label = "approved"'
+
+# Combine space, label, and text
+atlassian confluence cql 'type=page AND space.key = "DEV" AND label = "rfc" AND text ~ "auth"'
+
+# Pages modified recently
+atlassian confluence cql 'type=page AND lastModified > "2024-01-01" ORDER BY lastModified DESC'
+
+atlassian confluence cql '<query>' --limit 10
+```
+
 ### List child pages
 
 ```bash
@@ -98,6 +118,16 @@ The `-f` flag accepts `.md` files (auto-converted to Confluence format), `.html`
 atlassian confluence update <pageId> -f updated-content.md
 atlassian confluence update <pageId> -t "New Title"
 atlassian confluence update <pageId> -f content.md -m "Fixed typos"
+```
+
+### Copy a page (requires confirmation)
+
+```bash
+# -t sets the title of the copy; -d sets the parent page it will live under
+atlassian confluence copy <pageId> -t "Copy of RFC" -d <destinationParentPageId>
+
+# Optionally carry over attachments and/or labels
+atlassian confluence copy <pageId> -t "Copy of RFC" -d <destinationParentPageId> --attachments --labels
 ```
 
 ### Delete a page (requires confirmation)
@@ -208,6 +238,40 @@ atlassian jira transition CARD-42 --to "Done"
 atlassian jira delete CARD-42
 ```
 
+### User search
+
+Use this to find a user's `accountId` before assigning an issue. The `--assignee` flag on create/update requires an accountId, not a display name.
+
+```bash
+atlassian jira users "Jane Smith"
+atlassian jira users "jane@example"
+atlassian jira users "smith" --limit 20
+```
+
+### Epics
+
+```bash
+# List all issues belonging to an epic
+atlassian jira epic CARD-5
+atlassian jira epic CARD-5 --limit 100
+```
+
+### Boards & sprints
+
+```bash
+# List all boards
+atlassian jira boards
+atlassian jira boards --limit 50
+
+# List sprints on a board (use board ID from `jira boards`)
+atlassian jira sprints <boardId>
+atlassian jira sprints <boardId> --state active   # active | future | closed
+
+# Move one or more issues to a sprint (requires confirmation)
+# Use sprint ID from `jira sprints`
+atlassian jira move-to-sprint <sprintId> <issueKey> [<issueKey> ...]
+```
+
 ### Comments
 
 ```bash
@@ -282,3 +346,7 @@ The CLI exits with a non-zero code and a clear error message on failure:
 - `transition --list` shows available workflow transitions before committing to one.
 - `link-types` shows available link type names — use the exact name with `link --type`.
 - Attachment MIME type is detected automatically from the file extension.
+- Use `confluence cql` instead of `confluence search` when searching across spaces or by content body.
+- Use `jira users` to look up accountIds before assigning issues — Jira requires accountId, not a display name.
+- Use `jira boards` then `jira sprints <boardId>` to get sprint IDs before calling `move-to-sprint`.
+- `jira epic <epicKey>` lists all child issues of an epic.
