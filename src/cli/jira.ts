@@ -259,6 +259,47 @@ export function registerJiraCommands(program: Command) {
     });
 
   jira
+    .command("comments <issueKey>")
+    .description("List comments on an issue")
+    .action(async (issueKey: string) => {
+      try {
+        const client = createClient();
+        const comments = await client.listComments(issueKey);
+        if (comments.length === 0) {
+          console.log(chalk.yellow("No comments."));
+          return;
+        }
+        for (const c of comments) {
+          const author = c.author?.displayName ?? "Unknown";
+          const date = new Date(c.created).toLocaleDateString();
+          console.log(chalk.dim("─".repeat(60)));
+          console.log(`${chalk.bold(author)} ${chalk.dim(`· ${date}`)}`);
+          console.log(client.descriptionToText({ fields: { description: c.body } } as never));
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  jira
+    .command("comment <issueKey>")
+    .description("Add a comment to an issue")
+    .requiredOption("-t, --text <text>", "Comment text")
+    .option("-y, --yes", "Skip confirmation prompt")
+    .action(async (issueKey: string, opts) => {
+      try {
+        if (!opts.yes) {
+          const ok = await confirm(`Add comment to ${issueKey}?`);
+          if (!ok) { console.log(chalk.dim("Cancelled.")); return; }
+        }
+        await createClient().addComment(issueKey, opts.text);
+        console.log(chalk.green(`✓ Comment added to ${issueKey}.`));
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  jira
     .command("attach <issueKey> <file>")
     .description("Upload a file as an attachment to an issue")
     .option("-y, --yes", "Skip confirmation prompt")

@@ -626,6 +626,47 @@ server.tool(
 );
 
 server.tool(
+  "jira_list_comments",
+  "List comments on a Jira issue",
+  { issueKey: z.string().describe("The issue key (e.g. 'PROJ-123')") },
+  async ({ issueKey }) => {
+    try {
+      const comments = await getJiraClient().listComments(issueKey);
+      if (comments.length === 0) {
+        return { content: [{ type: "text", text: "No comments." }] };
+      }
+      const client = getJiraClient();
+      const text = comments.map((c) => {
+        const author = c.author?.displayName ?? "Unknown";
+        const date = new Date(c.created).toLocaleDateString();
+        const body = client.descriptionToText({ fields: { description: c.body } } as never);
+        return `[${author} · ${date}]\n${body}`;
+      }).join("\n\n");
+      return { content: [{ type: "text", text }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
+  "jira_add_comment",
+  "Add a comment to a Jira issue. IMPORTANT: Ask the user for confirmation before calling this tool.",
+  {
+    issueKey: z.string().describe("The issue key (e.g. 'PROJ-123')"),
+    text: z.string().describe("Comment text (plain text)"),
+  },
+  async ({ issueKey, text }) => {
+    try {
+      await getJiraClient().addComment(issueKey, text);
+      return { content: [{ type: "text", text: `✓ Comment added to ${issueKey}.` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
   "jira_upload_attachment",
   "Upload a file as an attachment to a Jira issue. IMPORTANT: Ask the user for confirmation before calling this tool.",
   {

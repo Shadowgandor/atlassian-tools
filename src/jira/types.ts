@@ -73,3 +73,11 @@ export interface JiraAttachmentUploadInput {
   issueKey: string;
   filePath: string;
 }
+
+export interface JiraComment {
+  id: string;
+  author?: { displayName: string; accountId: string };
+  body?: unknown;
+  created: string;
+  updated?: string;
+}

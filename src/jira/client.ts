@@ -7,6 +7,7 @@ import {
   JiraIssue,
   JiraAttachment,
   JiraAttachmentUploadInput,
+  JiraComment,
   JiraTransition,
   IssueCreateInput,
   IssueUpdateInput,
@@ -157,6 +158,22 @@ export class JiraClient {
     await this.http.request<void>(
       `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
       { method: "DELETE" },
+    );
+  }
+
+  // ── Comments ─────────────────────────────────────────────────────
+
+  async listComments(issueKey: string): Promise<JiraComment[]> {
+    const result = await this.http.request<{ comments: JiraComment[] }>(
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`,
+    );
+    return result.comments;
+  }
+
+  async addComment(issueKey: string, text: string): Promise<JiraComment> {
+    return this.http.request<JiraComment>(
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`,
+      { method: "POST", body: JSON.stringify({ body: textToAdf(text) }) },
     );
   }
 
