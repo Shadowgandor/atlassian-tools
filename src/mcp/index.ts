@@ -224,6 +224,33 @@ server.tool(
 );
 
 server.tool(
+  "confluence_search_cql",
+  "Search Confluence content using CQL (Confluence Query Language) — more powerful than confluence_search_pages, supports full-text search across all spaces, filtering by label, date, type, etc.",
+  {
+    cql: z.string().describe("CQL query, e.g. 'type=page AND text ~ \"kubernetes\"' or 'type=page AND label = \"approved\" AND space.key = \"DEV\"'"),
+    limit: z.number().optional().describe("Max results (default 25)"),
+  },
+  async ({ cql, limit }) => {
+    try {
+      const results = await getConfluenceClient().searchCQL(cql, limit ?? 25);
+      if (results.length === 0) {
+        return { content: [{ type: "text", text: "No results found." }] };
+      }
+      const baseUrl = process.env.ATLASSIAN_URL ?? process.env.CONFLUENCE_URL?.replace(/\/wiki\/?$/, "") ?? "";
+      const text = results.map((r) => {
+        const space = r.space ? ` [${r.space.key}]` : "";
+        const ver = r.version ? ` v${r.version.number}` : "";
+        const url = r._links?.webui ? `\n  ${baseUrl}/wiki${r._links.webui}` : "";
+        return `${r.title}${space}${ver} (id: ${r.id}, ${r.type})${url}`;
+      }).join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
   "confluence_list_comments",
   "List comments on a Confluence page",
   {

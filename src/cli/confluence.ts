@@ -191,6 +191,31 @@ export function registerConfluenceCommands(program: Command) {
     });
 
   confluence
+    .command("cql <query>")
+    .description("Search Confluence using CQL (full-text, cross-space, label filters, etc.)")
+    .option("-l, --limit <n>", "Max results", "25")
+    .action(async (query: string, opts) => {
+      try {
+        const results = await createClient().searchCQL(query, Number(opts.limit));
+        if (results.length === 0) {
+          console.log(chalk.yellow("No results found."));
+          return;
+        }
+        const baseUrl = process.env.ATLASSIAN_URL ?? process.env.CONFLUENCE_URL?.replace(/\/wiki\/?$/, "") ?? "";
+        for (const r of results) {
+          const space = r.space ? chalk.dim(` [${r.space.key}]`) : "";
+          const ver = r.version ? chalk.dim(` v${r.version.number}`) : "";
+          console.log(`${chalk.bold(r.title)}${space}${ver} ${chalk.dim(`(id: ${r.id})`)}`);
+          if (r._links?.webui) {
+            console.log(`  ${chalk.cyan(`${baseUrl}/wiki${r._links.webui}`)}`);
+          }
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
     .command("comments <pageId>")
     .description("List comments on a page")
     .option("-l, --limit <n>", "Max results", "25")

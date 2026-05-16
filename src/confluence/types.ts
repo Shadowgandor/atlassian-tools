@@ -66,3 +66,12 @@ export interface ConfluenceComment {
     createdBy?: { displayName: string };
   };
 }
+
+export interface CQLSearchResult {
+  id: string;
+  title: string;
+  type: string;
+  space?: { key: string; name: string };
+  version?: { number: number };
+  _links?: { webui?: string; base?: string };
+}

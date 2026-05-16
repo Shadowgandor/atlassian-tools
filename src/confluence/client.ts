@@ -8,6 +8,7 @@ import {
   ConfluenceAttachment,
   ConfluenceLabel,
   ConfluenceComment,
+  CQLSearchResult,
   AttachmentUploadInput,
   PageCreateInput,
   PageUpdateInput,
@@ -81,6 +82,18 @@ export class ConfluenceClient {
   async listPages(spaceId: string, limit = 25): Promise<ConfluencePage[]> {
     const result = await this.http.request<PaginatedResponse<ConfluencePage>>(
       `/api/v2/spaces/${spaceId}/pages?limit=${limit}`,
+    );
+    return result.results;
+  }
+
+  async searchCQL(cql: string, limit = 25): Promise<CQLSearchResult[]> {
+    const params = new URLSearchParams({
+      cql,
+      limit: String(limit),
+      expand: "space,version",
+    });
+    const result = await this.http.request<{ results: CQLSearchResult[] }>(
+      `/rest/api/content/search?${params.toString()}`,
     );
     return result.results;
   }
