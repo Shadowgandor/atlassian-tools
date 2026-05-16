@@ -44,10 +44,12 @@ export function registerConfluenceCommands(program: Command) {
     .command("spaces")
     .description("List available spaces")
     .option("-l, --limit <n>", "Max spaces to return", "25")
+    .option("--all", "Fetch up to 250 results (Atlassian max per request)")
     .action(async (opts) => {
       try {
         const client = createClient();
-        const spaces = await client.listSpaces(Number(opts.limit));
+        const limit = opts.all ? 250 : Number(opts.limit);
+        const spaces = await client.listSpaces(limit);
         for (const s of spaces) {
           console.log(`${chalk.bold(s.name)} ${chalk.dim(`[${s.key}] id:${s.id}`)}`);
         }
@@ -84,13 +86,14 @@ export function registerConfluenceCommands(program: Command) {
     .requiredOption("-s, --space <key>", "Space key")
     .option("-t, --title <title>", "Filter by title")
     .option("-l, --limit <n>", "Max results", "25")
+    .option("--all", "Fetch up to 250 results (Atlassian max per request)")
     .action(async (opts) => {
       try {
         const client = createClient();
         const pages = await client.searchPages({
           spaceKey: opts.space,
           title: opts.title,
-          limit: Number(opts.limit),
+          limit: opts.all ? 250 : Number(opts.limit),
         });
         if (pages.length === 0) {
           console.log(chalk.yellow("No pages found."));
@@ -303,9 +306,10 @@ export function registerConfluenceCommands(program: Command) {
     .command("cql <query>")
     .description("Search Confluence using CQL (full-text, cross-space, label filters, etc.)")
     .option("-l, --limit <n>", "Max results", "25")
+    .option("--all", "Fetch up to 250 results (Atlassian max per request)")
     .action(async (query: string, opts) => {
       try {
-        const results = await createClient().searchCQL(query, Number(opts.limit));
+        const results = await createClient().searchCQL(query, opts.all ? 250 : Number(opts.limit));
         if (results.length === 0) {
           console.log(chalk.yellow("No results found."));
           return;
@@ -442,10 +446,11 @@ export function registerConfluenceCommands(program: Command) {
     .command("children <pageId>")
     .description("List child pages of a page")
     .option("-l, --limit <n>", "Max results", "25")
+    .option("--all", "Fetch up to 250 results (Atlassian max per request)")
     .action(async (pageId: string, opts) => {
       try {
         const client = createClient();
-        const pages = await client.listChildPages(pageId, Number(opts.limit));
+        const pages = await client.listChildPages(pageId, opts.all ? 250 : Number(opts.limit));
         if (pages.length === 0) {
           console.log(chalk.yellow("No child pages."));
           return;

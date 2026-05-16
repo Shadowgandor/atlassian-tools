@@ -49,10 +49,11 @@ export function registerJiraCommands(program: Command) {
     .command("projects")
     .description("List available projects")
     .option("-l, --limit <n>", "Max projects to return", "25")
+    .option("--all", "Fetch up to 50 results (Jira default max per request)")
     .action(async (opts) => {
       try {
         const client = createClient();
-        const projects = await client.listProjects(Number(opts.limit));
+        const projects = await client.listProjects(opts.all ? 50 : Number(opts.limit));
         for (const p of projects) {
           console.log(`${chalk.bold(p.name)} ${chalk.dim(`[${p.key}] id:${p.id}`)}`);
         }
@@ -65,9 +66,10 @@ export function registerJiraCommands(program: Command) {
     .command("epic <epicKey>")
     .description("List all issues belonging to an epic")
     .option("-l, --limit <n>", "Max results", "50")
+    .option("--all", "Fetch up to 100 results per request")
     .action(async (epicKey: string, opts) => {
       try {
-        const issues = await createClient().listEpicIssues(epicKey, Number(opts.limit));
+        const issues = await createClient().listEpicIssues(epicKey, opts.all ? 100 : Number(opts.limit));
         if (issues.length === 0) {
           console.log(chalk.yellow("No issues found in this epic."));
           return;
@@ -295,6 +297,7 @@ export function registerJiraCommands(program: Command) {
     .option("--type <type>", "Filter by issue type")
     .option("--jql <query>", "Raw JQL query (overrides other filters)")
     .option("-l, --limit <n>", "Max results", "25")
+    .option("--all", "Fetch up to 100 results per request")
     .action(async (opts) => {
       try {
         const client = createClient();
@@ -304,7 +307,7 @@ export function registerJiraCommands(program: Command) {
           status: opts.status,
           assignee: opts.assignee,
           type: opts.type,
-          limit: Number(opts.limit),
+          limit: opts.all ? 100 : Number(opts.limit),
         });
         if (issues.length === 0) {
           console.log(chalk.yellow("No issues found."));
