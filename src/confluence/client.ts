@@ -194,4 +194,13 @@ export class ConfluenceClient {
     );
     return result.results;
   }
+
+  // ── Children ──────────────────────────────────────────────────────
+
+  async listChildPages(pageId: string, limit = 25): Promise<ConfluencePage[]> {
+    const result = await this.http.request<PaginatedResponse<ConfluencePage>>(
+      `/api/v2/pages/${pageId}/children?limit=${limit}`,
+    );
+    return result.results;
+  }
 }

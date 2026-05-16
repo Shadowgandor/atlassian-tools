@@ -224,6 +224,29 @@ server.tool(
 );
 
 server.tool(
+  "confluence_list_child_pages",
+  "List child pages of a Confluence page",
+  {
+    pageId: z.string().describe("The parent page ID"),
+    limit: z.number().optional().describe("Max results (default 25)"),
+  },
+  async ({ pageId, limit }) => {
+    try {
+      const pages = await getConfluenceClient().listChildPages(pageId, limit ?? 25);
+      if (pages.length === 0) {
+        return { content: [{ type: "text", text: "No child pages found." }] };
+      }
+      const text = pages
+        .map((p) => `${p.title} (id: ${p.id}, v${p.version?.number ?? "?"})`)
+        .join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
   "confluence_upload_attachment",
   "Upload a file as an attachment to a Confluence page. IMPORTANT: Ask the user for confirmation before calling this tool.",
   {

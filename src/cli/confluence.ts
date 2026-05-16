@@ -191,6 +191,26 @@ export function registerConfluenceCommands(program: Command) {
     });
 
   confluence
+    .command("children <pageId>")
+    .description("List child pages of a page")
+    .option("-l, --limit <n>", "Max results", "25")
+    .action(async (pageId: string, opts) => {
+      try {
+        const client = createClient();
+        const pages = await client.listChildPages(pageId, Number(opts.limit));
+        if (pages.length === 0) {
+          console.log(chalk.yellow("No child pages."));
+          return;
+        }
+        for (const p of pages) {
+          console.log(formatPage(p));
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
     .command("attach <pageId> <file>")
     .description("Upload a file as an attachment to a page")
     .option("-c, --comment <text>", "Attachment comment")
