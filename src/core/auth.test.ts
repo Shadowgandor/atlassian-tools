@@ -79,7 +79,7 @@ describe("loadConfigFromEnv", () => {
   });
 
   it("throws when no variables are set", () => {
-    expect(() => loadConfigFromEnv()).toThrow("Missing required environment variable(s)");
+    expect(() => loadConfigFromEnv()).toThrow("Missing required environment variables:");
   });
 
   it("lists all missing variables in error message", () => {
@@ -91,5 +91,21 @@ describe("loadConfigFromEnv", () => {
   it("throws for partially set variables", () => {
     process.env.ATLASSIAN_URL = "https://test.atlassian.net";
     expect(() => loadConfigFromEnv()).toThrow(/ATLASSIAN_EMAIL.*ATLASSIAN_TOKEN/);
+  });
+
+  it("uses singular 'variable' when only one is missing", () => {
+    process.env.ATLASSIAN_URL = "https://test.atlassian.net";
+    process.env.ATLASSIAN_EMAIL = "a@b.com";
+    expect(() => loadConfigFromEnv()).toThrow("Missing required environment variable: ATLASSIAN_TOKEN");
+  });
+
+  it("shows set variables in error output", () => {
+    process.env.ATLASSIAN_URL = "https://test.atlassian.net";
+    expect(() => loadConfigFromEnv()).toThrow("https://test.atlassian.net");
+  });
+
+  it("does not reveal the token value in error output", () => {
+    process.env.ATLASSIAN_TOKEN = "secret-token";
+    expect(() => loadConfigFromEnv()).not.toThrow("secret-token");
   });
 });
