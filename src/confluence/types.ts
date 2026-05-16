@@ -91,3 +91,15 @@ export interface ConfluenceTemplate {
   description?: string;
   body?: { storage?: { value: string } };
 }
+
+export interface ConfluenceVersion {
+  number: number;
+  message?: string;
+  minorEdit: boolean;
+  when: string;
+  by?: { displayName: string; accountId?: string };
+}
+
+export interface ConfluenceVersionDetail extends ConfluenceVersion {
+  content?: { id: string; title: string; body?: { storage?: { value: string } } };
+}

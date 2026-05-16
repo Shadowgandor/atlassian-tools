@@ -529,6 +529,62 @@ export function registerConfluenceCommands(program: Command) {
     });
 
   confluence
+    .command("versions <pageId>")
+    .description("List version history of a page")
+    .option("-l, --limit <n>", "Max versions to show", "25")
+    .action(async (pageId: string, opts) => {
+      try {
+        const client = createClient();
+        const [page, versions] = await Promise.all([
+          client.getPage(pageId),
+          client.listVersions(pageId, Number(opts.limit)),
+        ]);
+        console.log(`Version history for ${chalk.bold(page.title)} ${chalk.dim(`(id: ${pageId})`)}`);
+        for (const v of versions) {
+          const date = new Date(v.when).toLocaleString();
+          const author = v.by?.displayName ?? "Unknown";
+          const msg = v.message ? chalk.dim(` — ${v.message}`) : "";
+          const minor = v.minorEdit ? chalk.dim(" [minor]") : "";
+          console.log(`  v${chalk.bold(String(v.number))}  ${chalk.dim(date)}  ${author}${minor}${msg}`);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
+    .command("restore <pageId> <version>")
+    .description("Restore a page to a previous version")
+    .option("-y, --yes", "Skip confirmation prompt")
+    .option("--dry-run", "Print what would happen without making changes")
+    .action(async (pageId: string, version: string, opts) => {
+      try {
+        const client = createClient();
+        const page = await client.getPage(pageId);
+        const versionNumber = Number(version);
+
+        if (opts.dryRun) {
+          console.log(chalk.cyan("[dry run] Would restore page to previous version:"));
+          console.log(`  Page:    ${formatPage(page)}`);
+          console.log(`  Version: ${versionNumber}`);
+          return;
+        }
+        if (!opts.yes) {
+          console.log(chalk.yellow(`⚠ About to restore page to version ${versionNumber}:`));
+          console.log(`  ${formatPage(page)}`);
+          console.log();
+          const ok = await confirm("Proceed? This creates a new version with the old content.");
+          if (!ok) { console.log(chalk.dim("Cancelled.")); return; }
+        }
+        const restored = await client.restoreVersion(pageId, versionNumber);
+        console.log(chalk.green(`✓ Restored: ${formatPage(restored)}`));
+        console.log(`  ${chalk.cyan(pageUrl(restored))}`);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
     .command("delete <pageId>")
     .description("Delete a page")
     .option("-y, --yes", "Skip confirmation prompt")

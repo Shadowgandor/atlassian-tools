@@ -10,6 +10,8 @@ import {
   ConfluenceLabel,
   ConfluenceComment,
   ConfluenceTemplate,
+  ConfluenceVersion,
+  ConfluenceVersionDetail,
   CQLSearchResult,
   AttachmentUploadInput,
   PageCopyInput,
@@ -270,6 +272,29 @@ export class ConfluenceClient {
       `/rest/api/content/${pageId}/label/${encodeURIComponent(label)}`,
       { method: "DELETE" },
     );
+  }
+
+  // ── Versions ─────────────────────────────────────────────────────
+
+  async listVersions(pageId: string, limit = 25): Promise<ConfluenceVersion[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    const result = await this.http.request<{ results: ConfluenceVersion[] }>(
+      `/rest/api/content/${pageId}/version?${params.toString()}`,
+    );
+    return result.results;
+  }
+
+  async getVersion(pageId: string, versionNumber: number): Promise<ConfluenceVersionDetail> {
+    return this.http.request<ConfluenceVersionDetail>(
+      `/rest/api/content/${pageId}/version/${versionNumber}?expand=content.body.storage`,
+    );
+  }
+
+  async restoreVersion(pageId: string, versionNumber: number): Promise<ConfluencePage> {
+    const version = await this.getVersion(pageId, versionNumber);
+    const body = version.content?.body?.storage?.value ?? "";
+    const title = version.content?.title;
+    return this.updatePage({ pageId, body, ...(title ? { title } : {}), versionMessage: `Restored to version ${versionNumber}` });
   }
 
   // ── Children ──────────────────────────────────────────────────────
