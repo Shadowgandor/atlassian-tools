@@ -62,6 +62,25 @@ export function registerJiraCommands(program: Command) {
     });
 
   jira
+    .command("epic <epicKey>")
+    .description("List all issues belonging to an epic")
+    .option("-l, --limit <n>", "Max results", "50")
+    .action(async (epicKey: string, opts) => {
+      try {
+        const issues = await createClient().listEpicIssues(epicKey, Number(opts.limit));
+        if (issues.length === 0) {
+          console.log(chalk.yellow("No issues found in this epic."));
+          return;
+        }
+        for (const i of issues) {
+          console.log(formatIssue(i));
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  jira
     .command("boards")
     .description("List Jira boards")
     .option("-l, --limit <n>", "Max results", "25")

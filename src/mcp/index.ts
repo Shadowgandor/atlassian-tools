@@ -653,6 +653,29 @@ server.tool(
 );
 
 server.tool(
+  "jira_list_epic_issues",
+  "List all issues belonging to a Jira epic",
+  {
+    epicKey: z.string().describe("The epic issue key (e.g. 'PROJ-5')"),
+    limit: z.number().optional().describe("Max results (default 50)"),
+  },
+  async ({ epicKey, limit }) => {
+    try {
+      const issues = await getJiraClient().listEpicIssues(epicKey, limit ?? 50);
+      if (issues.length === 0) {
+        return { content: [{ type: "text", text: "No issues found in this epic." }] };
+      }
+      const text = issues
+        .map((i) => `${i.key} — ${i.fields.summary} [${i.fields.status.name}] (${i.fields.issuetype.name})`)
+        .join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
   "jira_list_boards",
   "List Jira boards (Scrum and Kanban)",
   { limit: z.number().optional().describe("Max results (default 25)") },

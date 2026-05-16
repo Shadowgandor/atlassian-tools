@@ -81,6 +81,15 @@ export class JiraClient {
     return result.values;
   }
 
+  // ── Epics ────────────────────────────────────────────────────────
+
+  async listEpicIssues(epicKey: string, limit = 50): Promise<JiraIssue[]> {
+    const result = await this.http.request<JiraSearchResponse>(
+      `/rest/agile/1.0/epic/${encodeURIComponent(epicKey)}/issue?maxResults=${limit}`,
+    );
+    return result.issues;
+  }
+
   // ── Boards & sprints ─────────────────────────────────────────────
 
   async listBoards(limit = 25): Promise<JiraBoard[]> {
