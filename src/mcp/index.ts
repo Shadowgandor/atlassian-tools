@@ -224,6 +224,33 @@ server.tool(
 );
 
 server.tool(
+  "confluence_copy_page",
+  "Copy a Confluence page to a new location with a new title. IMPORTANT: Ask the user for confirmation before calling this tool.",
+  {
+    pageId: z.string().describe("The page ID to copy"),
+    title: z.string().describe("Title for the new copy"),
+    destinationPageId: z.string().describe("Parent page ID where the copy will be placed"),
+    copyAttachments: z.boolean().optional().describe("Also copy attachments (default false)"),
+    copyLabels: z.boolean().optional().describe("Also copy labels (default false)"),
+  },
+  async ({ pageId, title, destinationPageId, copyAttachments, copyLabels }) => {
+    try {
+      const page = await getConfluenceClient().copyPage({ pageId, title, destinationPageId, copyAttachments, copyLabels });
+      const baseUrl = process.env.ATLASSIAN_URL ?? process.env.CONFLUENCE_URL?.replace(/\/wiki\/?$/, "") ?? "";
+      const text = [
+        `✓ Page copied successfully.`,
+        `  Title: ${page.title}`,
+        `  ID:    ${page.id}`,
+        `  URL:   ${baseUrl}/wiki/pages/${page.id}`,
+      ].join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: formatError(err) }], isError: true };
+    }
+  },
+);
+
+server.tool(
   "confluence_search_cql",
   "Search Confluence content using CQL (Confluence Query Language) — more powerful than confluence_search_pages, supports full-text search across all spaces, filtering by label, date, type, etc.",
   {

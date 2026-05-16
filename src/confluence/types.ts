@@ -75,3 +75,11 @@ export interface CQLSearchResult {
   version?: { number: number };
   _links?: { webui?: string; base?: string };
 }
+
+export interface PageCopyInput {
+  pageId: string;
+  title: string;
+  destinationPageId: string;
+  copyAttachments?: boolean;
+  copyLabels?: boolean;
+}

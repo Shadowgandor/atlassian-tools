@@ -191,6 +191,43 @@ export function registerConfluenceCommands(program: Command) {
     });
 
   confluence
+    .command("copy <pageId>")
+    .description("Copy a page to a new location")
+    .requiredOption("-t, --title <title>", "Title for the new copy")
+    .requiredOption("-d, --destination <pageId>", "Parent page ID for the copy")
+    .option("--attachments", "Also copy attachments")
+    .option("--labels", "Also copy labels")
+    .option("-y, --yes", "Skip confirmation prompt")
+    .action(async (pageId: string, opts) => {
+      try {
+        const client = createClient();
+        const source = await client.getPage(pageId);
+
+        if (!opts.yes) {
+          console.log(chalk.yellow("⚠ About to copy page:"));
+          console.log(`  Source:      ${formatPage(source)}`);
+          console.log(`  New title:   ${opts.title}`);
+          console.log(`  Destination: parent page ${opts.destination}`);
+          console.log();
+          const ok = await confirm("Proceed?");
+          if (!ok) { console.log(chalk.dim("Cancelled.")); return; }
+        }
+
+        const copy = await client.copyPage({
+          pageId,
+          title: opts.title,
+          destinationPageId: opts.destination,
+          copyAttachments: opts.attachments,
+          copyLabels: opts.labels,
+        });
+        console.log(chalk.green(`✓ Copied: ${formatPage(copy)}`));
+        console.log(`  ${chalk.cyan(pageUrl(copy))}`);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  confluence
     .command("cql <query>")
     .description("Search Confluence using CQL (full-text, cross-space, label filters, etc.)")
     .option("-l, --limit <n>", "Max results", "25")

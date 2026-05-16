@@ -10,6 +10,7 @@ import {
   ConfluenceComment,
   CQLSearchResult,
   AttachmentUploadInput,
+  PageCopyInput,
   PageCreateInput,
   PageUpdateInput,
   PageSearchOptions,
@@ -158,6 +159,24 @@ export class ConfluenceClient {
       method: "PUT",
       body: JSON.stringify(payload),
     });
+  }
+
+  // ── Copy ─────────────────────────────────────────────────────────
+
+  async copyPage(input: PageCopyInput): Promise<ConfluencePage> {
+    const payload = {
+      copyAttachments: input.copyAttachments ?? false,
+      copyPermissions: false,
+      copyProperties: false,
+      copyLabels: input.copyLabels ?? false,
+      copyCustomContents: false,
+      destination: { type: "parent_page", value: input.destinationPageId },
+      pageTitle: input.title,
+    };
+    return this.http.request<ConfluencePage>(
+      `/rest/api/content/${input.pageId}/copy`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
   }
 
   // ── Delete ───────────────────────────────────────────────────────
