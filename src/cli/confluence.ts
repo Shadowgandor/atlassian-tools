@@ -340,8 +340,8 @@ export function registerConfluenceCommands(program: Command) {
           return;
         }
         for (const c of comments) {
-          const author = c.history?.createdBy?.displayName ?? "Unknown";
-          const date = c.history?.createdDate ? new Date(c.history.createdDate).toLocaleDateString() : "";
+          const author = c.createdBy?.displayName ?? "Unknown";
+          const date = c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "";
           console.log(chalk.dim(`─`.repeat(60)));
           console.log(`${chalk.bold(author)}${date ? chalk.dim(` · ${date}`) : ""}`);
           console.log(c.body?.storage?.value ?? "");
@@ -546,8 +546,8 @@ export function registerConfluenceCommands(program: Command) {
         ]);
         console.log(`Version history for ${chalk.bold(page.title)} ${chalk.dim(`(id: ${pageId})`)}`);
         for (const v of versions) {
-          const date = new Date(v.when).toLocaleString();
-          const author = v.by?.displayName ?? "Unknown";
+          const date = new Date(v.createdAt).toLocaleString();
+          const author = v.authorId ?? "Unknown";
           const msg = v.message ? chalk.dim(` — ${v.message}`) : "";
           const minor = v.minorEdit ? chalk.dim(" [minor]") : "";
           console.log(`  v${chalk.bold(String(v.number))}  ${chalk.dim(date)}  ${author}${minor}${msg}`);

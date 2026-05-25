@@ -61,10 +61,8 @@ export interface ConfluenceLabel {
 export interface ConfluenceComment {
   id: string;
   body?: { storage?: { value: string } };
-  history?: {
-    createdDate: string;
-    createdBy?: { displayName: string };
-  };
+  createdAt?: string;
+  createdBy?: { accountId?: string; displayName: string };
 }
 
 export interface CQLSearchResult {
@@ -96,10 +94,6 @@ export interface ConfluenceVersion {
   number: number;
   message?: string;
   minorEdit: boolean;
-  when: string;
-  by?: { displayName: string; accountId?: string };
-}
-
-export interface ConfluenceVersionDetail extends ConfluenceVersion {
-  content?: { id: string; title: string; body?: { storage?: { value: string } } };
+  createdAt: string;
+  authorId?: string;
 }

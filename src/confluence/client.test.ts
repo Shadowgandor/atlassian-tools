@@ -153,12 +153,13 @@ describe("ConfluenceClient.addLabels", () => {
 });
 
 describe("ConfluenceClient.addComment", () => {
-  it("posts a storage-format comment body", async () => {
+  it("posts a storage-format comment body to the v2 footer-comments endpoint", async () => {
     mockRequest.mockResolvedValueOnce({ id: "c1" });
     await new ConfluenceClient(config).addComment("30", "<p>Nice work</p>");
-    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
-    expect(body.type).toBe("comment");
-    expect(body.container.id).toBe("30");
-    expect(body.body.storage.value).toBe("<p>Nice work</p>");
+    const [url, opts] = mockRequest.mock.calls[0] as [string, { body: string }];
+    expect(url).toBe("/api/v2/pages/30/footer-comments");
+    const body = JSON.parse(opts.body);
+    expect(body.body.value).toBe("<p>Nice work</p>");
+    expect(body.body.representation).toBe("storage");
   });
 });

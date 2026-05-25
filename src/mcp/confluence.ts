@@ -317,8 +317,8 @@ export function registerConfluenceTools(server: McpServer): void {
           return { content: [{ type: "text", text: "No comments." }] };
         }
         const text = comments.map((c) => {
-          const author = c.history?.createdBy?.displayName ?? "Unknown";
-          const date = c.history?.createdDate ? new Date(c.history.createdDate).toLocaleDateString() : "";
+          const author = c.createdBy?.displayName ?? "Unknown";
+          const date = c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "";
           const body = c.body?.storage?.value ?? "";
           return `[${author}${date ? ` · ${date}` : ""}]\n${body}`;
         }).join("\n\n");
@@ -468,8 +468,8 @@ export function registerConfluenceTools(server: McpServer): void {
         ]);
         const header = `Version history for "${page.title}" (id: ${pageId})`;
         const lines = versions.map((v) => {
-          const date = new Date(v.when).toLocaleString();
-          const author = v.by?.displayName ?? "Unknown";
+          const date = new Date(v.createdAt).toLocaleString();
+          const author = v.authorId ?? "Unknown";
           const msg = v.message ? ` — ${v.message}` : "";
           const minor = v.minorEdit ? " [minor]" : "";
           return `v${v.number}  ${date}  ${author}${minor}${msg}`;

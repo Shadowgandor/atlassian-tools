@@ -67,8 +67,13 @@ export class JiraClient {
   // ── Epics ────────────────────────────────────────────────────────
 
   async listEpicIssues(epicKey: string, limit = 50): Promise<JiraIssue[]> {
+    const params = new URLSearchParams({
+      jql: `parent = "${epicKey}"`,
+      maxResults: String(limit),
+      fields: "summary,status,issuetype,priority,assignee,reporter,created,updated,labels",
+    });
     const result = await this.http.request<JiraSearchResponse>(
-      `/rest/agile/1.0/epic/${encodeURIComponent(epicKey)}/issue?maxResults=${limit}`,
+      `/rest/api/3/search/jql?${params.toString()}`,
     );
     return result.issues;
   }

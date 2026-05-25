@@ -11,7 +11,6 @@ import {
   ConfluenceComment,
   ConfluenceTemplate,
   ConfluenceVersion,
-  ConfluenceVersionDetail,
   CQLSearchResult,
   AttachmentUploadInput,
   PageCopyInput,
@@ -198,10 +197,13 @@ export class ConfluenceClient {
       results: Array<{
         id: string;
         title: string;
-        metadata?: { mediaType?: string; comment?: string };
-        _links?: { download?: string; webui?: string; base?: string };
+        mediaType?: string;
+        fileSize?: number;
+        comment?: string;
+        downloadLink?: string;
+        webuiLink?: string;
       }>;
-    }>(`/rest/api/content/${pageId}/child/attachment`, {
+    }>(`/api/v2/pages/${pageId}/attachments`, {
       method: "POST",
       body: formData,
       headers: { "X-Atlassian-Token": "no-check" },
@@ -211,9 +213,13 @@ export class ConfluenceClient {
     return {
       id: att.id,
       title: att.title,
-      mediaType: att.metadata?.mediaType ?? attachmentMimeType(filePath),
-      comment: att.metadata?.comment,
-      _links: att._links,
+      mediaType: att.mediaType ?? attachmentMimeType(filePath),
+      fileSize: att.fileSize,
+      comment: att.comment,
+      _links: {
+        download: att.downloadLink,
+        webui: att.webuiLink,
+      },
     };
   }
 
@@ -228,22 +234,20 @@ export class ConfluenceClient {
 
   async listComments(pageId: string, limit = 25): Promise<ConfluenceComment[]> {
     const params = new URLSearchParams({
-      expand: "body.storage,history",
+      "body-format": "storage",
       limit: String(limit),
     });
     const result = await this.http.request<{ results: ConfluenceComment[] }>(
-      `/rest/api/content/${pageId}/child/comment?${params.toString()}`,
+      `/api/v2/pages/${pageId}/footer-comments?${params.toString()}`,
     );
     return result.results;
   }
 
   async addComment(pageId: string, text: string): Promise<ConfluenceComment> {
     const payload = {
-      type: "comment",
-      container: { id: pageId, type: "page" },
-      body: { storage: { value: text, representation: "storage" } },
+      body: { value: text, representation: "storage" },
     };
-    return this.http.request<ConfluenceComment>("/rest/api/content", {
+    return this.http.request<ConfluenceComment>(`/api/v2/pages/${pageId}/footer-comments`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -253,7 +257,7 @@ export class ConfluenceClient {
 
   async listLabels(pageId: string): Promise<ConfluenceLabel[]> {
     const result = await this.http.request<{ results: ConfluenceLabel[] }>(
-      `/rest/api/content/${pageId}/label`,
+      `/api/v2/pages/${pageId}/labels`,
     );
     return result.results;
   }
@@ -261,15 +265,15 @@ export class ConfluenceClient {
   async addLabels(pageId: string, labels: string[]): Promise<ConfluenceLabel[]> {
     const payload = labels.map((name) => ({ prefix: "global", name }));
     const result = await this.http.request<{ results: ConfluenceLabel[] }>(
-      `/rest/api/content/${pageId}/label`,
-      { method: "POST", body: JSON.stringify(payload) },
+      `/api/v2/pages/${pageId}/labels`,
+      { method: "PUT", body: JSON.stringify(payload) },
     );
     return result.results;
   }
 
   async removeLabel(pageId: string, label: string): Promise<void> {
     await this.http.request<void>(
-      `/rest/api/content/${pageId}/label/${encodeURIComponent(label)}`,
+      `/api/v2/pages/${pageId}/labels?name=${encodeURIComponent(label)}`,
       { method: "DELETE" },
     );
   }
@@ -279,22 +283,23 @@ export class ConfluenceClient {
   async listVersions(pageId: string, limit = 25): Promise<ConfluenceVersion[]> {
     const params = new URLSearchParams({ limit: String(limit) });
     const result = await this.http.request<{ results: ConfluenceVersion[] }>(
-      `/rest/api/content/${pageId}/version?${params.toString()}`,
+      `/api/v2/pages/${pageId}/versions?${params.toString()}`,
     );
     return result.results;
   }
 
-  async getVersion(pageId: string, versionNumber: number): Promise<ConfluenceVersionDetail> {
-    return this.http.request<ConfluenceVersionDetail>(
-      `/rest/api/content/${pageId}/version/${versionNumber}?expand=content.body.storage`,
+  async getVersion(pageId: string, versionNumber: number): Promise<ConfluenceVersion> {
+    return this.http.request<ConfluenceVersion>(
+      `/api/v2/pages/${pageId}/versions/${versionNumber}`,
     );
   }
 
   async restoreVersion(pageId: string, versionNumber: number): Promise<ConfluencePage> {
-    const version = await this.getVersion(pageId, versionNumber);
-    const body = version.content?.body?.storage?.value ?? "";
-    const title = version.content?.title;
-    return this.updatePage({ pageId, body, ...(title ? { title } : {}), versionMessage: `Restored to version ${versionNumber}` });
+    const historical = await this.http.request<ConfluencePage>(
+      `/api/v2/pages/${pageId}?version-number=${versionNumber}&body-format=storage`,
+    );
+    const body = historical.body?.storage?.value ?? "";
+    return this.updatePage({ pageId, body, title: historical.title, versionMessage: `Restored to version ${versionNumber}` });
   }
 
   // ── Children ──────────────────────────────────────────────────────
