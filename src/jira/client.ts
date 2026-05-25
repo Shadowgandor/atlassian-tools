@@ -153,7 +153,7 @@ export class JiraClient {
     });
 
     const result = await this.http.request<JiraSearchResponse>(
-      `/rest/api/3/search?${params.toString()}`,
+      `/rest/api/3/search/jql?${params.toString()}`,
     );
     return result.issues;
   }
