@@ -9,7 +9,8 @@ CLI and MCP server for Atlassian Cloud. Manage Confluence pages and Jira issues 
 - **Shared auth** — One set of credentials (`ATLASSIAN_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_TOKEN`) for all products
 - **CLI** — `atlassian` command with product subcommands, interactive confirmations, coloured output
 - **MCP server** — Expose all operations as tools for AI agents (Claude Code, etc.)
-- **Markdown support** — Automatically converts `.md` files to Confluence storage format
+- **Markdown support** — Automatically converts `.md` files to Confluence storage format; and parses markdown headings/lists/bold/italic into native ADF nodes for Jira descriptions
+- **Flexible Jira descriptions** — Three formats: `plain` (verbatim), `markdown` (headings, lists, inline styles), `adf` (raw ADF JSON); load from inline text or a file
 - **Secure by design** — Credentials are read from environment variables only, never written to disk
 
 ## Installation
@@ -129,9 +130,31 @@ atlassian jira create --project CARD --type Task --summary "Set up CI" --priorit
 # Create a subtask
 atlassian jira create --project CARD --type Subtask --summary "Write tests" --parent CARD-42
 
+# Descriptions — three formats (default: plain, stored verbatim)
+# plain: **bold** and # Heading are stored as literal characters
+atlassian jira create --project CARD --type Task --summary "Refactor auth" \
+  --description "Inline plain text description"
+
+# markdown: headings, lists, bold/italic/code/links become native Jira formatting
+atlassian jira create --project CARD --type Task --summary "Refactor auth" \
+  --description "## Goals\n\n- Remove legacy middleware\n- Add **OAuth2** support" \
+  --description-format markdown
+
+# Load description from a markdown file (useful for long descriptions)
+atlassian jira create --project CARD --type Story --summary "API redesign" \
+  --description-file ./description.md --description-format markdown
+
+# Load a pre-built ADF JSON document directly
+atlassian jira create --project CARD --type Task --summary "Migrate DB" \
+  --description-adf-file ./description.adf.json
+
+# Validate and preview an ADF file before submitting
+atlassian jira validate-adf ./description.adf.json
+
 # Update an issue
 atlassian jira update CARD-42 --priority High --summary "Fix login regression"
 atlassian jira update CARD-42 --labels "critical,frontend"
+atlassian jira update CARD-42 --description-file ./updated.md --description-format markdown
 
 # Transition an issue
 atlassian jira transition CARD-42 --list          # show available transitions
@@ -243,8 +266,8 @@ Or without a global install:
 | `jira_list_projects`              | List projects                               | No                  |
 | `jira_get_issue`                  | Get issue details by key                    | No                  |
 | `jira_search_issues`              | Search with JQL or filters                  | No                  |
-| `jira_create_issue`               | Create a new issue (supports `parentKey` for subtasks) | **Yes** |
-| `jira_update_issue`               | Update an existing issue                    | **Yes**             |
+| `jira_create_issue`               | Create a new issue (supports `parentKey` for subtasks, `descriptionFormat` for plain/markdown/adf) | **Yes** |
+| `jira_update_issue`               | Update an existing issue (supports `descriptionFormat` for plain/markdown/adf) | **Yes** |
 | `jira_transition_issue`           | Transition issue status                     | **Yes**             |
 | `jira_delete_issue`               | Delete an issue                             | **Yes**             |
 | `jira_list_comments`              | List comments on an issue                   | No                  |
@@ -323,6 +346,24 @@ await jira.addComment("CARD-42", "Blocked on infra, see CARD-10.");
 await jira.linkIssues("CARD-42", "Blocks", "CARD-99");
 await jira.addWorklog({ issueKey: "CARD-42", timeSpent: "2h", comment: "Auth implementation" });
 await jira.uploadAttachment({ issueKey: "CARD-42", filePath: "/tmp/screenshot.png" });
+
+// Description formats — plain (default), markdown, or raw ADF
+await jira.createIssue({
+  projectKey: "CARD", issueType: "Task", summary: "Refactor auth",
+  description: "## Goals\n\n- Remove legacy middleware\n- Add **OAuth2** support",
+  descriptionFormat: "markdown",
+});
+await jira.updateIssue({
+  issueKey: "CARD-42",
+  description: JSON.stringify({ type: "doc", version: 1, content: [] }),
+  descriptionFormat: "adf",
+});
+
+// Validate ADF before submitting
+import { validateAdf, markdownToAdf } from "atlassian-tools/jira";
+const adf = markdownToAdf("## Title\n\n- item one\n- item two");
+const { valid, error } = validateAdf(adf);
+if (!valid) throw new Error(error);
 
 // Boards & sprints
 const boards = await jira.listBoards();

@@ -229,11 +229,47 @@ atlassian jira create --project CARD --type Story --summary "User auth" --labels
 atlassian jira create --project CARD --type Subtask --summary "Write unit tests" --parent CARD-42
 ```
 
+#### Description formats for create and update
+
+By default `--description` stores text verbatim as plain paragraphs — markdown tokens like `**bold**` or `# Heading` appear as literal characters in Jira.
+
+Use `--description-format` to control how the description is interpreted:
+
+| Flag | Behaviour |
+|------|-----------|
+| `--description-format plain` | Default. Text stored verbatim. |
+| `--description-format markdown` | Parses headings (`#`–`######`), bullet/ordered lists, fenced code blocks, blockquotes, bold, italic, inline code, and links into native Jira (ADF) nodes. |
+| `--description-format adf` | Treats the input as a raw ADF JSON string and passes it directly to the API. |
+
+```bash
+# Inline markdown description
+atlassian jira create --project CARD --type Task --summary "Refactor auth" \
+  --description "## Goals\n\n- Remove legacy middleware\n- Add **OAuth2** support" \
+  --description-format markdown
+
+# Load description from a markdown file
+atlassian jira create --project CARD --type Story --summary "API redesign" \
+  --description-file ./description.md --description-format markdown
+
+# Load a pre-built ADF JSON document
+atlassian jira create --project CARD --type Task --summary "Migrate DB" \
+  --description-adf-file ./description.adf.json
+```
+
+Validate and preview an ADF file before submitting:
+
+```bash
+atlassian jira validate-adf ./description.adf.json
+```
+
 ### Update an issue (requires confirmation)
 
 ```bash
 atlassian jira update CARD-42 --summary "Fix login regression"
 atlassian jira update CARD-42 --priority High --labels "critical,frontend"
+
+# Update description from a markdown file
+atlassian jira update CARD-42 --description-file ./updated.md --description-format markdown
 ```
 
 ### Transition an issue (requires confirmation)
@@ -363,3 +399,7 @@ The CLI exits with a non-zero code and a clear error message on failure:
 - Use `jira users` to look up accountIds before assigning issues — Jira requires accountId, not a display name.
 - Use `jira boards` then `jira sprints <boardId>` to get sprint IDs before calling `move-to-sprint`.
 - `jira epic <epicKey>` lists all child issues of an epic.
+- Jira descriptions default to `plain` format — use `--description-format markdown` when the description contains headings, lists, or inline formatting so they render as native Jira formatting rather than literal characters.
+- Use `--description-file` to load a long description from disk instead of passing it inline; combine with `--description-format markdown` for `.md` files.
+- Use `--description-adf-file` to pass a pre-built ADF JSON document directly (no format flag needed).
+- Run `jira validate-adf <file>` to check an ADF JSON file and preview its plain-text rendering before submitting it to Jira.

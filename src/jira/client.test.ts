@@ -92,6 +92,58 @@ describe("JiraClient.createIssue", () => {
     expect(result.key).toBe("PROJ-99");
   });
 
+  it("sends plain description as ADF paragraphs when descriptionFormat is plain", async () => {
+    const created = { id: "1", key: "PROJ-2", self: "" };
+    const issue = { key: "PROJ-2", fields: { summary: "S", status: { name: "Open" }, issuetype: { name: "Task" }, priority: null, assignee: null, reporter: null, labels: [], created: "", updated: "", description: null } };
+    mockRequest.mockResolvedValueOnce(created).mockResolvedValueOnce(issue);
+
+    await new JiraClient(config).createIssue({
+      projectKey: "PROJ", issueType: "Task", summary: "S",
+      description: "Hello\n\nWorld", descriptionFormat: "plain",
+    });
+
+    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
+    expect(body.fields.description.type).toBe("doc");
+    expect(body.fields.description.content).toHaveLength(2);
+    expect(body.fields.description.content[0].type).toBe("paragraph");
+    expect(body.fields.description.content[1].content[0].text).toBe("World");
+  });
+
+  it("sends markdown description with heading and list nodes when descriptionFormat is markdown", async () => {
+    const created = { id: "2", key: "PROJ-3", self: "" };
+    const issue = { key: "PROJ-3", fields: { summary: "S", status: { name: "Open" }, issuetype: { name: "Task" }, priority: null, assignee: null, reporter: null, labels: [], created: "", updated: "", description: null } };
+    mockRequest.mockResolvedValueOnce(created).mockResolvedValueOnce(issue);
+
+    await new JiraClient(config).createIssue({
+      projectKey: "PROJ", issueType: "Task", summary: "S",
+      description: "## Goals\n\n- Alpha\n- Beta",
+      descriptionFormat: "markdown",
+    });
+
+    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
+    const content = body.fields.description.content;
+    expect(content[0].type).toBe("heading");
+    expect(content[0].attrs.level).toBe(2);
+    expect(content[1].type).toBe("bulletList");
+    expect(content[1].content).toHaveLength(2);
+  });
+
+  it("passes raw ADF JSON through when descriptionFormat is adf", async () => {
+    const adfDoc = { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: "Pre-built" }] }] };
+    const created = { id: "3", key: "PROJ-4", self: "" };
+    const issue = { key: "PROJ-4", fields: { summary: "S", status: { name: "Open" }, issuetype: { name: "Task" }, priority: null, assignee: null, reporter: null, labels: [], created: "", updated: "", description: null } };
+    mockRequest.mockResolvedValueOnce(created).mockResolvedValueOnce(issue);
+
+    await new JiraClient(config).createIssue({
+      projectKey: "PROJ", issueType: "Task", summary: "S",
+      description: JSON.stringify(adfDoc),
+      descriptionFormat: "adf",
+    });
+
+    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
+    expect(body.fields.description).toEqual(adfDoc);
+  });
+
   it("includes parentKey as parent field when provided", async () => {
     mockRequest
       .mockResolvedValueOnce({ id: "1", key: "PROJ-10", self: "" })
@@ -115,6 +167,27 @@ describe("JiraClient.updateIssue", () => {
     expect(mockRequest.mock.calls[0][0]).toBe("/rest/api/3/issue/PROJ-1");
     expect((mockRequest.mock.calls[0][1] as { method: string }).method).toBe("PUT");
     expect(result.fields.summary).toBe("Updated");
+  });
+
+  it("sends plain description as ADF paragraph", async () => {
+    const issue = { key: "PROJ-1", fields: { summary: "X", status: { name: "Open" }, issuetype: { name: "Task" }, priority: null, assignee: null, reporter: null, labels: [], created: "", updated: "", description: null } };
+    mockRequest.mockResolvedValueOnce(undefined).mockResolvedValueOnce(issue);
+
+    await new JiraClient(config).updateIssue({ issueKey: "PROJ-1", description: "Simple text", descriptionFormat: "plain" });
+    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
+    expect(body.fields.description.type).toBe("doc");
+    expect(body.fields.description.content[0].type).toBe("paragraph");
+    expect(body.fields.description.content[0].content[0].text).toBe("Simple text");
+  });
+
+  it("sends markdown description with heading nodes", async () => {
+    const issue = { key: "PROJ-1", fields: { summary: "X", status: { name: "Open" }, issuetype: { name: "Task" }, priority: null, assignee: null, reporter: null, labels: [], created: "", updated: "", description: null } };
+    mockRequest.mockResolvedValueOnce(undefined).mockResolvedValueOnce(issue);
+
+    await new JiraClient(config).updateIssue({ issueKey: "PROJ-1", description: "# My Heading", descriptionFormat: "markdown" });
+    const body = JSON.parse((mockRequest.mock.calls[0][1] as { body: string }).body);
+    expect(body.fields.description.content[0].type).toBe("heading");
+    expect(body.fields.description.content[0].attrs.level).toBe(1);
   });
 });
 

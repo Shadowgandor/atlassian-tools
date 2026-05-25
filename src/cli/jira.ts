@@ -1,8 +1,10 @@
+import { readFile } from "fs/promises";
 import { Command } from "commander";
 import chalk from "chalk";
 import { loadConfigFromEnv } from "../core/auth.js";
 import { JiraClient } from "../jira/client.js";
-import { JiraIssue, JiraSprint } from "../jira/types.js";
+import { markdownToAdf, validateAdf, descriptionToAdf, adfToText } from "../jira/helpers.js";
+import { JiraIssue, JiraSprint, DescriptionFormat } from "../jira/types.js";
 import { handleError, confirm } from "./helpers.js";
 
 function createClient(): JiraClient {
@@ -21,6 +23,28 @@ function formatIssue(issue: JiraIssue): string {
 function issueUrl(issueKey: string): string {
   const base = process.env.ATLASSIAN_URL ?? process.env.CONFLUENCE_URL?.replace(/\/wiki\/?$/, "") ?? "";
   return `${base}/browse/${issueKey}`;
+}
+
+async function resolveDescription(opts: {
+  description?: string;
+  descriptionFormat?: string;
+  descriptionFile?: string;
+  descriptionAdfFile?: string;
+}): Promise<{ description: string | undefined; descriptionFormat: DescriptionFormat | undefined }> {
+  if (opts.descriptionAdfFile) {
+    const text = await readFile(opts.descriptionAdfFile, "utf-8");
+    return { description: text, descriptionFormat: "adf" };
+  }
+  if (opts.descriptionFile) {
+    const text = await readFile(opts.descriptionFile, "utf-8");
+    const fmt = (opts.descriptionFormat ?? "plain") as DescriptionFormat;
+    return { description: text, descriptionFormat: fmt };
+  }
+  if (opts.description) {
+    const fmt = (opts.descriptionFormat ?? "plain") as DescriptionFormat;
+    return { description: opts.description, descriptionFormat: fmt };
+  }
+  return { description: undefined, descriptionFormat: undefined };
 }
 
 export function registerJiraCommands(program: Command) {
@@ -352,7 +376,17 @@ export function registerJiraCommands(program: Command) {
     .requiredOption("--project <key>", "Project key")
     .requiredOption("--type <type>", "Issue type (Bug, Task, Story, etc.)")
     .requiredOption("--summary <text>", "Issue summary")
-    .option("--description <text>", "Issue description")
+    .option(
+      "--description <text>",
+      "Issue description. Without --description-format, text is stored verbatim — markdown tokens like **bold** or # Heading remain as literal characters.",
+    )
+    .option(
+      "--description-format <format>",
+      "How to interpret the description: plain (default, stored verbatim), markdown (parse headings/lists/bold/italic into native Jira formatting), adf (raw ADF JSON string)",
+      "plain",
+    )
+    .option("--description-file <path>", "Read description from a file (use --description-format to set format; defaults to plain)")
+    .option("--description-adf-file <path>", "Read description from an ADF JSON file (shorthand for --description-file with --description-format adf)")
     .option("--priority <name>", "Priority (Highest, High, Medium, Low, Lowest)")
     .option("--labels <labels>", "Comma-separated labels")
     .option("--parent <key>", "Parent issue key (creates a subtask)")
@@ -362,6 +396,8 @@ export function registerJiraCommands(program: Command) {
       try {
         const client = createClient();
 
+        const { description, descriptionFormat } = await resolveDescription(opts);
+
         if (opts.dryRun) {
           console.log(chalk.cyan("[dry run] Would create issue:"));
           console.log(`  Project: ${opts.project}`);
@@ -369,6 +405,7 @@ export function registerJiraCommands(program: Command) {
           console.log(`  Summary: ${opts.summary}`);
           if (opts.priority) console.log(`  Priority: ${opts.priority}`);
           if (opts.parent) console.log(`  Parent:  ${opts.parent}`);
+          if (description) console.log(`  Description format: ${descriptionFormat}`);
           return;
         }
 
@@ -379,6 +416,7 @@ export function registerJiraCommands(program: Command) {
           console.log(`  Summary: ${opts.summary}`);
           if (opts.priority) console.log(`  Priority: ${opts.priority}`);
           if (opts.parent) console.log(`  Parent:  ${opts.parent}`);
+          if (description) console.log(`  Description format: ${descriptionFormat}`);
           console.log();
 
           const ok = await confirm("Proceed?");
@@ -392,7 +430,8 @@ export function registerJiraCommands(program: Command) {
           projectKey: opts.project,
           issueType: opts.type,
           summary: opts.summary,
-          description: opts.description,
+          description,
+          descriptionFormat,
           priority: opts.priority,
           labels: opts.labels?.split(",").map((l: string) => l.trim()),
           parentKey: opts.parent,
@@ -409,7 +448,17 @@ export function registerJiraCommands(program: Command) {
     .command("update <issueKey>")
     .description("Update an existing issue")
     .option("--summary <text>", "New summary")
-    .option("--description <text>", "New description")
+    .option(
+      "--description <text>",
+      "New description. Without --description-format, text is stored verbatim — markdown tokens like **bold** or # Heading remain as literal characters.",
+    )
+    .option(
+      "--description-format <format>",
+      "How to interpret the description: plain (default, stored verbatim), markdown (parse headings/lists/bold/italic into native Jira formatting), adf (raw ADF JSON string)",
+      "plain",
+    )
+    .option("--description-file <path>", "Read description from a file (use --description-format to set format; defaults to plain)")
+    .option("--description-adf-file <path>", "Read description from an ADF JSON file (shorthand for --description-file with --description-format adf)")
     .option("--priority <name>", "New priority")
     .option("--labels <labels>", "Comma-separated labels")
     .option("-y, --yes", "Skip confirmation prompt")
@@ -419,11 +468,14 @@ export function registerJiraCommands(program: Command) {
         const client = createClient();
         const current = await client.getIssue(issueKey);
 
+        const { description, descriptionFormat } = await resolveDescription(opts);
+
         if (opts.dryRun) {
           console.log(chalk.cyan("[dry run] Would update issue:"));
           console.log(`  ${formatIssue(current)}`);
           if (opts.summary) console.log(`  Summary: ${current.fields.summary} → ${opts.summary}`);
           if (opts.priority) console.log(`  Priority: → ${opts.priority}`);
+          if (description) console.log(`  Description format: ${descriptionFormat}`);
           return;
         }
 
@@ -432,6 +484,7 @@ export function registerJiraCommands(program: Command) {
           console.log(`  ${formatIssue(current)}`);
           if (opts.summary) console.log(`  Summary: ${current.fields.summary} → ${opts.summary}`);
           if (opts.priority) console.log(`  Priority: → ${opts.priority}`);
+          if (description) console.log(`  Description format: ${descriptionFormat}`);
           console.log();
 
           const ok = await confirm("Proceed?");
@@ -444,13 +497,44 @@ export function registerJiraCommands(program: Command) {
         const updated = await client.updateIssue({
           issueKey,
           summary: opts.summary,
-          description: opts.description,
+          description,
+          descriptionFormat,
           priority: opts.priority,
           labels: opts.labels?.split(",").map((l: string) => l.trim()),
         });
 
         console.log(chalk.green(`✓ Updated: ${formatIssue(updated)}`));
         console.log(`  ${chalk.cyan(issueUrl(updated.key))}`);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  jira
+    .command("validate-adf <file>")
+    .description("Validate an ADF JSON file and render it as plain text for review before submitting")
+    .action(async (file: string) => {
+      try {
+        const text = await readFile(file, "utf-8");
+        let adf: unknown;
+        try {
+          adf = JSON.parse(text);
+        } catch {
+          console.error(chalk.red("Error: file is not valid JSON"));
+          process.exit(1);
+        }
+        const result = validateAdf(adf);
+        if (!result.valid) {
+          console.error(chalk.red(`Invalid ADF: ${result.error}`));
+          process.exit(1);
+        }
+        console.log(chalk.green("✓ Valid ADF document"));
+        console.log();
+        console.log(chalk.bold("Rendered as plain text:"));
+        console.log(adfToText(adf));
+        console.log();
+        console.log(chalk.bold("ADF structure:"));
+        console.log(JSON.stringify(adf, null, 2));
       } catch (err) {
         handleError(err);
       }

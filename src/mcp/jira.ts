@@ -113,14 +113,22 @@ export function registerJiraTools(server: McpServer): void {
       projectKey: z.string().describe("The project key (e.g. 'PROJ')"),
       issueType: z.string().describe("Issue type (Bug, Task, Story, Epic, etc.)"),
       summary: z.string().describe("Issue summary/title"),
-      description: z.string().optional().describe("Issue description (plain text)"),
+      description: z.string().optional().describe(
+        "Issue description. Without descriptionFormat, text is stored verbatim — markdown tokens like **bold** or # Heading remain as literal characters.",
+      ),
+      descriptionFormat: z
+        .enum(["plain", "markdown", "adf"])
+        .optional()
+        .describe(
+          "How to interpret description: plain (default, stored verbatim), markdown (parse headings/lists/bold/italic into native Jira formatting), adf (raw ADF JSON string)",
+        ),
       priority: z.string().optional().describe("Priority (Highest, High, Medium, Low, Lowest)"),
       labels: z.array(z.string()).optional().describe("Labels to apply"),
       parentKey: z.string().optional().describe("Parent issue key for creating a subtask (e.g. 'PROJ-10')"),
     },
-    async ({ projectKey, issueType, summary, description, priority, labels, parentKey }) => {
+    async ({ projectKey, issueType, summary, description, descriptionFormat, priority, labels, parentKey }) => {
       try {
-        const issue = await getClient().createIssue({ projectKey, issueType, summary, description, priority, labels, parentKey });
+        const issue = await getClient().createIssue({ projectKey, issueType, summary, description, descriptionFormat, priority, labels, parentKey });
         const base = baseUrl();
         const text = [
           `✓ Issue created successfully.`,
@@ -143,13 +151,21 @@ export function registerJiraTools(server: McpServer): void {
     {
       issueKey: z.string().describe("The issue key to update (e.g. 'PROJ-123')"),
       summary: z.string().optional().describe("New summary/title"),
-      description: z.string().optional().describe("New description (plain text)"),
+      description: z.string().optional().describe(
+        "New description. Without descriptionFormat, text is stored verbatim — markdown tokens like **bold** or # Heading remain as literal characters.",
+      ),
+      descriptionFormat: z
+        .enum(["plain", "markdown", "adf"])
+        .optional()
+        .describe(
+          "How to interpret description: plain (default, stored verbatim), markdown (parse headings/lists/bold/italic into native Jira formatting), adf (raw ADF JSON string)",
+        ),
       priority: z.string().optional().describe("New priority"),
       labels: z.array(z.string()).optional().describe("New labels (replaces existing)"),
     },
-    async ({ issueKey, summary, description, priority, labels }) => {
+    async ({ issueKey, summary, description, descriptionFormat, priority, labels }) => {
       try {
-        const issue = await getClient().updateIssue({ issueKey, summary, description, priority, labels });
+        const issue = await getClient().updateIssue({ issueKey, summary, description, descriptionFormat, priority, labels });
         const base = baseUrl();
         const text = [
           `✓ Issue updated successfully.`,

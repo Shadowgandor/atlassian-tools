@@ -30,11 +30,14 @@ export interface JiraTransition {
   to: { name: string };
 }
 
+export type DescriptionFormat = "plain" | "markdown" | "adf";
+
 export interface IssueCreateInput {
   projectKey: string;
   issueType: string;
   summary: string;
   description?: string;
+  descriptionFormat?: DescriptionFormat;
   priority?: string;
   labels?: string[];
   assigneeId?: string;
@@ -45,6 +48,7 @@ export interface IssueUpdateInput {
   issueKey: string;
   summary?: string;
   description?: string;
+  descriptionFormat?: DescriptionFormat;
   priority?: string;
   labels?: string[];
   assigneeId?: string;

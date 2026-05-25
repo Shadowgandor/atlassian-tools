@@ -23,7 +23,7 @@ import {
   IssueUpdateInput,
   IssueSearchOptions,
 } from "./types.js";
-import { textToAdf, adfToText, buildJql } from "./helpers.js";
+import { textToAdf, adfToText, buildJql, descriptionToAdf } from "./helpers.js";
 
 interface JiraSearchResponse {
   issues: JiraIssue[];
@@ -166,7 +166,7 @@ export class JiraClient {
       issuetype: { name: input.issueType },
       summary: input.summary,
     };
-    if (input.description) fields.description = textToAdf(input.description);
+    if (input.description) fields.description = descriptionToAdf(input.description, input.descriptionFormat);
     if (input.priority) fields.priority = { name: input.priority };
     if (input.labels) fields.labels = input.labels;
     if (input.assigneeId) fields.assignee = { accountId: input.assigneeId };
@@ -185,7 +185,7 @@ export class JiraClient {
   async updateIssue(input: IssueUpdateInput): Promise<JiraIssue> {
     const fields: Record<string, unknown> = {};
     if (input.summary) fields.summary = input.summary;
-    if (input.description) fields.description = textToAdf(input.description);
+    if (input.description) fields.description = descriptionToAdf(input.description, input.descriptionFormat);
     if (input.priority) fields.priority = { name: input.priority };
     if (input.labels) fields.labels = input.labels;
     if (input.assigneeId) fields.assignee = { accountId: input.assigneeId };
