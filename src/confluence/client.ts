@@ -197,13 +197,11 @@ export class ConfluenceClient {
       results: Array<{
         id: string;
         title: string;
-        mediaType?: string;
-        fileSize?: number;
-        comment?: string;
-        downloadLink?: string;
-        webuiLink?: string;
+        metadata?: { mediaType?: string; comment?: string };
+        extensions?: { fileSize?: number; mediaType?: string };
+        _links?: { download?: string; webui?: string };
       }>;
-    }>(`/api/v2/pages/${pageId}/attachments`, {
+    }>(`/rest/api/content/${pageId}/child/attachment`, {
       method: "POST",
       body: formData,
       headers: { "X-Atlassian-Token": "no-check" },
@@ -213,12 +211,12 @@ export class ConfluenceClient {
     return {
       id: att.id,
       title: att.title,
-      mediaType: att.mediaType ?? attachmentMimeType(filePath),
-      fileSize: att.fileSize,
-      comment: att.comment,
+      mediaType: att.metadata?.mediaType ?? att.extensions?.mediaType ?? attachmentMimeType(filePath),
+      fileSize: att.extensions?.fileSize,
+      comment: att.metadata?.comment,
       _links: {
-        download: att.downloadLink,
-        webui: att.webuiLink,
+        download: att._links?.download,
+        webui: att._links?.webui,
       },
     };
   }

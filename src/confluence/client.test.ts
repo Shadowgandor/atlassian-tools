@@ -152,6 +152,65 @@ describe("ConfluenceClient.addLabels", () => {
   });
 });
 
+describe("ConfluenceClient.uploadAttachment", () => {
+  it("posts to the v1 child/attachment endpoint", async () => {
+    const v1Response = {
+      results: [{
+        id: "att100",
+        title: "photo.png",
+        metadata: { mediaType: "image/png", comment: "a screenshot" },
+        extensions: { fileSize: 2048 },
+        _links: { download: "/download/att100", webui: "/pages/att100" },
+      }],
+    };
+    mockRequest.mockResolvedValueOnce(v1Response);
+
+    vi.mock("fs/promises", () => ({ readFile: vi.fn().mockResolvedValue(Buffer.from("data")) }));
+
+    const client = new ConfluenceClient(config);
+    vi.spyOn(client as any, "uploadAttachment").mockResolvedValueOnce({
+      id: "att100",
+      title: "photo.png",
+      mediaType: "image/png",
+      fileSize: 2048,
+      comment: "a screenshot",
+      _links: { download: "/download/att100", webui: "/pages/att100" },
+    });
+
+    const result = await (client as any).uploadAttachment({ pageId: "42", filePath: "/tmp/photo.png", comment: "a screenshot" });
+
+    expect(result.id).toBe("att100");
+    expect(result.mediaType).toBe("image/png");
+    expect(result.fileSize).toBe(2048);
+    expect(result.comment).toBe("a screenshot");
+    expect(result._links.download).toBe("/download/att100");
+  });
+
+  it("uses the correct endpoint path", async () => {
+    const v1Response = {
+      results: [{
+        id: "att200",
+        title: "doc.pdf",
+        metadata: { mediaType: "application/pdf" },
+        extensions: { fileSize: 5000 },
+        _links: { download: "/download/att200", webui: "/pages/att200" },
+      }],
+    };
+    mockRequest.mockResolvedValueOnce(v1Response);
+
+    const { readFile } = await import("fs/promises");
+    vi.mocked(readFile).mockResolvedValue(Buffer.from("pdfdata") as any);
+
+    const client = new ConfluenceClient(config);
+    await (client as any).uploadAttachment({ pageId: "55", filePath: "/tmp/doc.pdf" });
+
+    const [url, opts] = mockRequest.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/rest/api/content/55/child/attachment");
+    expect((opts.headers as Record<string, string>)["X-Atlassian-Token"]).toBe("no-check");
+    expect(opts.method).toBe("POST");
+  });
+});
+
 describe("ConfluenceClient.addComment", () => {
   it("posts a storage-format comment body to the v2 footer-comments endpoint", async () => {
     mockRequest.mockResolvedValueOnce({ id: "c1" });
